@@ -32,7 +32,7 @@ loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.
 
 
 ```{r, include=F}
-h1b <- read.csv('h1b_datahubexport_2009-2019.csv')
+h1b <- read.csv('h1b_new.csv')
 str(h1b)
 #h1b$State
 ```
