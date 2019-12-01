@@ -136,7 +136,86 @@ summary(propcr.fit.nc)
 
 ```{r, echo=F}
 validationplot(propcr.fit,val.type="R2", main = "Standarized")
-validationplot(propcr.fit.nc,val.type="R2", main = "Non-Standarized")
+#validationplot(propcr.fit.nc,val.type="R2", main = "Non-Standarized")
+```
 
+### Industry code 55
+```{r, echo=F, warning=F}
+loadPkg("dplyr")
+```
+
+```{r, echo=F}
+ind54 <- h1b %>% filter(NAICS == 54)
+```
+
+#### Linear Model
+```{r}
+lm54 <- lm(IniPer ~ Fiscal.Year + State + ConPer, data = ind54)
+summary(lm54)
+```
+
+```{r}
+lm542 <- lm(ConPer ~ Fiscal.Year + State + IniPer, data = ind54)
+summary(lm542)
+```
+
+```{r, warning=F, echo=F}
+loadPkg("car")
+vif(lm54)
+plot(lm542)
+```
+
+### PCA/PCR ind54
+```{r}
+h1b$AllCon <- h1b$Continuing.Approvals + h1b$Continuing.Denials
+h1b$ConPer <- h1b$Continuing.Approvals / h1b$AllCon
+h1b$ConPer[is.na(h1b$ConPer)] <- 0
+
+dfh1b <- h1b %>% select(Fiscal.Year, Initial.Approvals, Initial.Denials, Continuing.Approvals, Continuing.Denials, AllIni, IniPer, AllCon, ConPer)
+str(dfh1b)
+```
+
+```{r}
+dfpca.out <- prcomp(dfh1b, scale = TRUE)
+dfpca.out.nc <- prcomp(dfh1b, scale = FALSE)
+
+summary(dfpca.out)
+dfpca.out$rotation
+```
+
+```{r, echo=F}
+summary(dfpca.out.nc)
+dfpca.out.nc$rotation
+```
+
+```{r, echo=F}
+pca.var <- (dfpca.out$sdev^2)
+pve <- pca.var/sum(pca.var)
+plot(cumsum(pve), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b", main = "Standardized")
+pca.var.nc <- (dfpca.out.nc$sdev^2)
+pve.nc <- pca.var.nc/sum(pca.var.nc)
+plot(cumsum(pve.nc), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b", main = "Non-standardized")
+```
+
+```{r, echo=F}
+#biplot(dfpca.out,1:2, scale =0)
+#biplot(dfpca.out.nc,1:2, scale =0)
+```
+
+```{r, echo=F, warning=F}
+loadPkg("pls")
+loadPkg("mice")
+loadPkg("ISLR")
+
+propcr.fit=pcr(IniPer~.,data=dfh1b,scale=TRUE,validation ="CV")
+summary(propcr.fit)
+
+propcr.fit.nc = pcr(IniPer~., data = dfh1b, scale = FALSE, validation = "CV")
+summary(propcr.fit.nc)
+```
+
+```{r, echo=F}
+validationplot(propcr.fit,val.type="R2", main = "Standarized")
+#validationplot(propcr.fit.nc,val.type="R2", main = "Non-Standarized")
 ```
 
