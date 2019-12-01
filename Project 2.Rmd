@@ -1,8 +1,17 @@
 ---
-title: "Project 2"
-author: "Wenyu Zeng"
-date: "2019/11/27"
-output: html_document
+title: "Project 2: H-1B Visa"
+author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
+date: "11/20/2019"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+    fig.align: "center"
+    toc_float: yes
+    theme: readable
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
 ---
 
 ```{r setup, include=FALSE}
@@ -139,4 +148,3 @@ validationplot(propcr.fit,val.type="R2", main = "Standarized")
 validationplot(propcr.fit.nc,val.type="R2", main = "Non-Standarized")
 
 ```
-
