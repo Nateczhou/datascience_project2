@@ -30,10 +30,11 @@ options(scientific=T, digits = 3)
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
 ```
 
-
 ```{r, include=F}
 h1b <- read.csv('h1b_new.csv')
+
 str(h1b)
+
 #h1b$State
 ```
 
@@ -42,109 +43,43 @@ loadPkg("dplyr")
 loadPkg("tidyr")
 ```
     
-```{r}
-h1b$AllIni <- h1b$Initial.Approvals + h1b$Initial.Denials
-h1b$IniPer <- h1b$Initial.Approvals / h1b$AllIni
+### Logistic Regression
+```{r, echo=F}
+h1b$Initial.Approvals <- as.factor(h1b$Initial.Approvals)
+h1b$Initial.Denials <- as.factor(h1b$Initial.Denials)
+h1b$Continuing.Approvals <- as.factor(h1b$Continuing.Approvals)
+h1b$Continuing.Denials <- as.factor(h1b$Continuing.Denials)
 h1b$NAICS <- as.factor(h1b$NAICS)
-h1b$IniPer[is.na(h1b$IniPer)] <- 0
-
-h1b$AllCon <- h1b$Continuing.Approvals + h1b$Continuing.Denials
-h1b$ConPer <- h1b$Continuing.Approvals / h1b$AllCon
-h1b$ConPer[is.na(h1b$ConPer)] <- 0
+str(h1b)
 ```
 
-### Linear Model
-```{r}
-testlm <- lm(IniPer ~ Fiscal.Year + NAICS + State + ConPer, data = h1b)
-summary(testlm)
+```{r, echo=F}
+IniApprLogit <- glm(Initial.Approvals ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
+summary(IniApprLogit)
 ```
 
-```{r}
-testlm2 <- lm(ConPer ~ Fiscal.Year + NAICS + State + IniPer, data = h1b)
-summary(testlm2)
-```
-
-```{r, warning=F}
-loadPkg("car")
-vif(testlm)
-plot(testlm)
-```
-
-```{r}
-lm1 <- lm(IniPer ~ Fiscal.Year + State, data = h1b)
-summary(lm1)
-```
-
-### TREE MODEL
+### Try Tree Model
 ```{r}
 loadPkg("rpart") # Classification trees, rpart(formula, data=, method=,control=) 
-loadPkg("ISLR")
-loadPkg("tree") 
-h1b <- na.omit(h1b) 
-```
-```{r}
-str(h1b)
-# put salary on log scale and fit reg. tree
-treefit1 <- tree(Initial.Approvals ~ Fiscal.Year + NAICS, data=h1b)
-summary(treefit1)
 ```
 
-```{r}
-plot(treefit1) 
-text(treefit1,cex=0.75)
+```{r, echo = T, fig.dim=c(6,4)}
+treefit <- rpart(Initial.Approvals ~ NAICS + State + Fiscal.Year,
+  	method="class", data=h1b)
+
+printcp(treefit) # display the results 
+plotcp(treefit) # visualize cross-validation results 
+summary(treefit) # detailed summary of splits
+
+# plot tree 
+plot(treefit, uniform=TRUE, main="Classification Tree for H1B")
+text(treefit, use.n=TRUE, all=TRUE, cex=.8)
+
 ```
 
-### PCA/PCR
-```{r}
-h1b$AllCon <- h1b$Continuing.Approvals + h1b$Continuing.Denials
-h1b$ConPer <- h1b$Continuing.Approvals / h1b$AllCon
-h1b$ConPer[is.na(h1b$ConPer)] <- 0
-
-dfh1b <- h1b %>% select(Fiscal.Year, Initial.Approvals, Initial.Denials, Continuing.Approvals, Continuing.Denials, AllIni, IniPer, AllCon, ConPer)
-str(dfh1b)
-```
 
 ```{r}
-dfpca.out <- prcomp(dfh1b, scale = TRUE)
-dfpca.out.nc <- prcomp(dfh1b, scale = FALSE)
-
-summary(dfpca.out)
-dfpca.out$rotation
+# create attractive postcript plot of tree 
+post(treefit, file = "kythosisTree2.ps", title = "Classification Tree for H1B")
 ```
-
-```{r, echo=F}
-summary(dfpca.out.nc)
-dfpca.out.nc$rotation
-```
-
-```{r, echo=F}
-pca.var <- (dfpca.out$sdev^2)
-pve <- pca.var/sum(pca.var)
-plot(cumsum(pve), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b", main = "Standardized")
-pca.var.nc <- (dfpca.out.nc$sdev^2)
-pve.nc <- pca.var.nc/sum(pca.var.nc)
-plot(cumsum(pve.nc), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b", main = "Non-standardized")
-```
-
-```{r, echo=F}
-#biplot(dfpca.out,1:2, scale =0)
-#biplot(dfpca.out.nc,1:2, scale =0)
-```
-
-```{r, echo=F, warning=F}
-loadPkg("pls")
-loadPkg("mice")
-loadPkg("ISLR")
-
-propcr.fit=pcr(IniPer~.,data=dfh1b,scale=TRUE,validation ="CV")
-summary(propcr.fit)
-
-propcr.fit.nc = pcr(IniPer~., data = dfh1b, scale = FALSE, validation = "CV")
-summary(propcr.fit.nc)
-```
-
-```{r, echo=F}
-validationplot(propcr.fit,val.type="R2", main = "Standarized")
-validationplot(propcr.fit.nc,val.type="R2", main = "Non-Standarized")
-
 ```
