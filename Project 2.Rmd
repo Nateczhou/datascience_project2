@@ -73,6 +73,7 @@ ConDenLogit <- glm(Continuing.Denials ~ Fiscal.Year + NAICS + State, data = h1b,
 summary(ConDenLogit)
 ```
 
+
 ### Model Evaluation
 
 #### ROC & AUC
@@ -122,6 +123,7 @@ loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model
 admitLogitpr2 = pR2(admitLogit)
 admitLogitpr2
 ```
+
 
 
 ### Try Tree Model
