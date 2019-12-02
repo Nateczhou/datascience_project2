@@ -46,13 +46,30 @@ IniApprLogit <- glm(Initial.Approvals ~ Fiscal.Year + NAICS + State, data = h1b,
 summary(IniApprLogit)
 ```
 
+```{r, echo=F}
+IniDenLogit <- glm(Initial.Denials ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
+summary(IniDenLogit)
+```
+
+```{r, echo=F}
+ConApprLogit <- glm(Continuing.Approvals ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
+summary(ConApprLogit)
+```
+
+```{r, echo=F}
+ConDenLogit <- glm(Continuing.Denials ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
+summary(ConDenLogit)
+```
+
+
+
 ### Try Tree Model
 ```{r}
 loadPkg("rpart") # Classification trees, rpart(formula, data=, method=,control=) 
 ```
 
 ```{r, echo = T, fig.dim=c(6,4)}
-treefit <- rpart(Initial.Approvals ~ NAICS + State + Fiscal.Year,
+treefit <- rpart(Initial.Approvals ~ Fiscal.Year + State + NAICS,
   	method="class", data=h1b)
 
 printcp(treefit) # display the results 
