@@ -99,4 +99,82 @@ text(treefit, use.n=TRUE, all=TRUE, cex=.8)
 # create attractive postcript plot of tree 
 post(treefit, file = "kythosisTree2.ps", title = "Classification Tree for H1B")
 ```
+
+
+
+### Try KNN
+```{r}
+# convert NAICS to binary based on mean of applicantsis
+is.na(h1b)
+h1bcopy <- drop_na(h1b)
+nrow(h1bcopy)/25
+h1bN <- h1bcopy %>% group_by(NAICS)
+h1bN
 ```
+
+```{r, echo=F}
+IniApprLogit <- glm(Initial.Approvals ~ Fiscal.Year + NAICS + State, data = h1bcopy, family = "binomial")
+summary(IniApprLogit)
+```
+
+```{r}
+h1b$NAICS <- as.character(h1b$NAICS)
+set.seed(1)
+h1b_data_train_rows = sample(1:nrow(h1b),     #<- from 1 to the number of 
+                                                     #   rows in the data set
+                              round(0.8 * nrow(h1b), 0),  #<- multiply the 
+                                                                #   number of rows
+                                                                #   by 0.8 and round
+                                                                #   the decimals
+                              replace = FALSE)       #<- don't replace the numbers
+
+# Let's check to make sure we have 80% of the rows. 
+length(h1b_data_train_rows) / nrow(h1b)
+
+h1b_data_train = h1b[h1b_data_train_rows, ]  #<- select the rows identified in
+                                                     #   the bank_data_train_rows data
+h1b_data_test = h1b[-h1b_data_train_rows, ]  #<- select the rows that weren't
+                                                     #   identified in the
+
+head(h1b_data_test)                                          
+```
+
+```{r}
+loadPkg("class")
+
+# k-Nearest Neighbor is a randomized algorithm, so make sure to
+# use set.seed() to make your results repeatable.
+set.seed(1)
+# h1b$Initial.Approvals <- NULL
+#h1b$NAICS <- as.integer(h1b$NAICS)
+#str(h1b)
+h1b_3NN = knn(train = h1b_data_train[, c("State", "NAICS")],  #<- training set cases
+               test = h1b_data_test[, c("State","NAICS")],    #<- test set cases
+               cl = h1b_data_train[, "Initial.Approvals"],                  #<- category for true classification
+               k = 3) #,                                                    #<- number of neighbors considered
+               #use.all = TRUE)                                            #<- control ties between class assignments
+                                                                            #   If true, all distances equal to the kth 
+                                                                            #   largest are included
+
+# View the output.
+str(h1b_3NN)
+length(h1b_3NN)
+table(h1b_3NN)
+```
+
+```{r}
+kNN_res = table(h1b_3NN,
+                h1b_data_test$`Initial.Approvals`)
+kNN_res
+sum(kNN_res)  #<- the total is all the test examples
+
+# Select the true positives and true negatives by selecting
+# only the cells where the row and column names are the same.
+kNN_res[row(kNN_res) == col(kNN_res)]
+
+# Calculate the accuracy rate by dividing the correct classifications
+# by the total number of classifications.
+kNN_acc = sum(kNN_res[row(kNN_res) == col(kNN_res)]) / sum(kNN_res)
+kNN_acc
+```
+
