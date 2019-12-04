@@ -30,13 +30,15 @@ options(scientific=T, digits = 3)
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
 ```
 
-```{r, include=F}
-h1b <- read.csv('h1b_new.csv')
+```{r, echo=F}
+house <- read.csv('kc_house_data.csv')
 
-str(h1b)
+str(house)
+# house <- na.omit(house) 
 
 #h1b$State
 ```
+
 
 ```{r, include=F}
 loadPkg("dplyr")
@@ -45,42 +47,38 @@ loadPkg("tidyr")
     
 ### Logistic Regression
 ```{r, echo=F}
-h1b$Initial.Approvals <- as.factor(h1b$Initial.Approvals)
-h1b$Initial.Denials <- as.factor(h1b$Initial.Denials)
-h1b$Continuing.Approvals <- as.factor(h1b$Continuing.Approvals)
-h1b$Continuing.Denials <- as.factor(h1b$Continuing.Denials)
-h1b$NAICS <- as.factor(h1b$NAICS)
-str(h1b)
+house$view <- as.factor(house$view)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+
+str(house)
 ```
 
 ```{r, echo=F}
-IniApprLogit <- glm(Initial.Approvals ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(IniApprLogit)
+viewmodel <- glm(view ~ price+ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data = house, family = "binomial")
+summary(viewmodel)
+# 
+# testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + floors +waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data = house, family = "binomial")
+# summary(testlog)
+
 ```
 
 ```{r, echo=F}
-IniDenLogit <- glm(Initial.Denials ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(IniDenLogit)
+viewmodel_del <- glm(view ~ price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above  + yr_built + sqft_living15 + lat + long, data = house, family = "binomial")
+summary(viewmodel_nocondition )
 ```
 
-```{r, echo=F}
-ConApprLogit <- glm(Continuing.Approvals ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(ConApprLogit)
-```
 
-```{r, echo=F}
-ConDenLogit <- glm(Continuing.Denials ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(ConDenLogit)
-```
 
 ### Model Evaluation
 
 #### ROC & AUC
 ```{r roc_auc1, echo=F}
 loadPkg("pROC") 
-prob=predict(IniApprLogit , type = c("response"))
-h1b$prob=prob
-h <- roc(Initial.Approvals~prob, data=h1b)
+prob=predict(viewmodel , type = c("response"))
+house$prob=prob
+h <- roc(view~prob, data=house)
 auc(h)
 plot(h)
 
@@ -88,39 +86,27 @@ plot(h)
 
 ```{r roc_auc2, echo=F}
 
-prob=predict(IniDenLogit, type = c("response"))
-h1b$prob=prob
-h <- roc(Initial.Denials~prob, data=h1b)
+loadPkg("pROC") 
+prob=predict(viewmodel_del , type = c("response"))
+house$prob=prob
+h <- roc(view~prob, data=house)
 auc(h)
 plot(h)
 
 ```
 
-```{r roc_auc3, echo=F}
-
-prob=predict(ConApprLogit , type = c("response"))
-h1b$prob=prob
-h <- roc(Continuing.Approvals~prob, data=h1b)
-auc(h)
-plot(h)
-
-```
-
-```{r roc_auc4, echo=F}
-
-prob=predict(ConDenLogit, type = c("response"))
-h1b$prob=prob
-h <- roc(Continuing.Denials~prob, data=h1b)
-auc(h) # area-under-curve prefer 0.8 or higher.
-plot(h)
-
-```
 #### McFadden
 
-```{r McFadden, echo=FALSE}
-loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
-admitLogitpr2 = pR2(admitLogit)
-admitLogitpr2
+```{r McFadden1, echo=FALSE}
+loadPkg("pscl")
+viewmodel2 = pR2(viewmodel)
+viewmodel2
+```
+
+```{r McFadden2, echo=FALSE}
+loadPkg("pscl")
+viewmodel_del2 = pR2(viewmodel_del)
+viewmodel_del2
 ```
 
 
