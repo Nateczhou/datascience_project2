@@ -30,6 +30,244 @@ options(scientific=T, digits = 3)
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
 ```
 
+### Import Dataset
+```{r, include=T}
+house <- read.csv("kc_house_data.csv")
+summary(house)
+house$view <- as.factor(house$view)
+str(house)
+```
+
+### Chapter 1 SMART Question
+
+### Logistic Regression
+#### Full Model
+```{r}
+house$waterfront <- as.factor(house$waterfront)
+house$condition <- as.factor(house$condition)
+house$grade <- as.factor(house$grade)
+testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors, data = house, family = "binomial")
+summary(testlog)
+```
+
+#### Adjusted Model
+```{r, echo=F}
+testlog2 <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above + sqft_living15 + yr_built + lat + long, data = house, family = "binomial")
+summary(testlog2)
+```
+
+### Model Evaluation
+
+#### Full model 
+#####ROC & AUC
+```{r roc_auc1, echo=F}
+loadPkg("pROC") 
+prob=predict(testlog , type = c("response"))
+house$prob=prob
+h <- roc(view~prob, data=house)
+auc(h)
+plot(h)
+```
+
+##### McFadden
+```{r McFadden, echo=FALSE}
+loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
+admitLogitpr2 = pR2(testlog)
+admitLogitpr2
+```
+
+#### Adjusted Model
+##### ROC & AUC
+```{r testlog2, echo=F}
+prob=predict(testlog2 , type = c("response"))
+house$prob=prob
+h <- roc(view~prob, data=house)
+auc(h)
+plot(h)
+```
+
+##### McFadden
+
+```{r McFadden, echo=FALSE}
+loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
+admitLogitpr2 = pR2(testlog2)
+admitLogitpr2
+```
+
+### PCA/PCR
+
+### KNN
+```{r}
+set.seed(1)
+house_data_train_rows = sample(1:nrow(house),     #<- from 1 to the number of 
+                                                     #   rows in the data set
+                              round(0.8 * nrow(house), 0),  #<- multiply the 
+                                                                #   number of rows
+                                                                #   by 0.8 and round
+                                                                #   the decimals
+                              replace = FALSE)       #<- don't replace the numbers
+
+# Let's check to make sure we have 80% of the rows. 
+length(house_data_train_rows) / nrow(house)
+
+house_data_train = house[house_data_train_rows, ]  #<- select the rows identified in
+                                                     #   the bank_data_train_rows data
+house_data_test = house[-house_data_train_rows, ]  #<- select the rows that weren't
+                                                     #   identified in the
+                                                     #   bank_data_train_rows data
+
+# Check the number of rows in each set.
+head(house_data_train)
+nrow(house_data_test)
+
+```
+Train the classifier
+
+```{r}
+# Let's train the classifier for k = 3. 
+# Install the "class" package that we'll use to run kNN.
+# Take some time to learn about all its functionality.
+# install.packages("class") 
+loadPkg("class")
+
+# k-Nearest Neighbor is a randomized algorithm, so make sure to
+# use set.seed() to make your results repeatable.
+set.seed(1)
+house_3NN = knn(train = house_data_train[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],  #<- training set cases
+               test = house_data_test[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],    #<- test set cases
+               cl = house_data_train[, "view"],                         #<- category for true classification
+               k = 3) #,                                                    #<- number of neighbors considered
+               # use.all = TRUE)                                            #<- control ties between class assignments
+                                                                            #   If true, all distances equal to the kth 
+                                                                            #   largest are included
+
+# View the output.
+str(house_3NN)
+length(house_3NN)
+table(house_3NN)
+```
+
+
+```{r}
+# How does the kNN classification compare to the true class?
+# Let's take a look at the confusion matrix by combining the 
+# predictions from bank_3NN to the original data set.
+kNN_res = table(house_3NN,
+                house_data_test$`view`)
+kNN_res
+sum(kNN_res)  #<- the total is all the test examples
+
+# Select the true positives and true negatives by selecting
+# only the cells where the row and column names are the same.
+kNN_res[row(kNN_res) == col(kNN_res)]
+
+# Calculate the accuracy rate by dividing the correct classifications
+# by the total number of classifications.
+kNN_acc = sum(kNN_res[row(kNN_res) == col(kNN_res)]) / sum(kNN_res)
+kNN_acc
+```
+
+### TREE
+```{r, echo = T, fig.dim=c(6,4)}
+kyphosisfit <- rpart(Kyphosis ~ Age + Number + Start,
+  	method="class", data=kyphosis)
+
+printcp(kyphosisfit) # display the results 
+plotcp(kyphosisfit) # visualize cross-validation results 
+summary(kyphosisfit) # detailed summary of splits
+
+# plot tree 
+plot(kyphosisfit, uniform=TRUE, main="Classification Tree for Kyphosis")
+text(kyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+
+
+```{r}
+# create attractive postcript plot of tree 
+post(kyphosisfit, file = "kythosisTree2.ps", title = "Classification Tree for Kythosis")
+```
+
+We can also create a simple but prettier plot for latter use. 
+
+So here are the results. 
+We see that at the first branching point, there are 64 absence, and 17 presence (with Kyphosis). The first split yields 19 outcomes with Start >= 8.5, and 62 with Start < 8.5. A further split on the right node might have been beneficial to separate the present and absent. The algorithm actually stops there, and predicts present for all 19 observations, giving 8/19 incorrect predictions. 
+
+Nonethelss, the lower branch continue to split, with 29 (100%) correct prediction and 12 (100%) on the first two leaves (nodes at end of branch)
+there, and 12/14 correct absence prediction on the third leaf, while the last leaf predicted 4/7 **present** correctly. Not too bad.
+
+Overall, when the model predicts **present**, accuracy is (11+4)/(8+11+3+4) = `r round( (11+4)/(8+11+3+4)*100,1 )`%. And when the model predicts **absent**, accuracy is (29+12+12)/(29+0+12+0+12+2) = `r round( (29+12+12)/(29+0+12+0+12+2)*100,1 )`%.
+
+We can also use some handy library to calculate these percentages in the confusion matrix.
+
+
+```{r, include=T}
+loadPkg("caret") 
+cm = confusionMatrix( predict(kyphosisfit, type = "class"), reference = kyphosis[, "Kyphosis"] )
+print('Overall: ')
+cm$overall
+print('Class: ')
+cm$byClass
+```
+
+The overall accuracy is 68/81 = 83.95%. We can also dig deep into these different metrics of sensitivity (also known as recall rate, TP / (TP+FN) ), specificity (TN / (TN+FP) ), F1 score, etc etc. That will take another class time at least. 
+
+
+```{r fancyplot}
+loadPkg("rpart.plot")
+rpart.plot(kyphosisfit)
+loadPkg("rattle") # For fancyRpartPlot (Trees) Answer "no" on installing from binary source
+fancyRpartPlot(kyphosisfit)
+
+```
+
+
+## Prune the tree
+
+```{r prune}
+#prune the tree 
+pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[2,"CP"])
+#pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[which.min( kyphosisfit$cptable[,"xerror"] ),"CP"])
+
+# plot the pruned tree 
+plot(pkyphosisfit, uniform=TRUE, main="Pruned Classification Tree for Kyphosis")
+text(pkyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+
+=======
+---
+title: "Project 2: H-1B Visa"
+author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
+date: "11/20/2019"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+    fig.align: "center"
+    toc_float: yes
+    theme: readable
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+---
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+knitr::opts_chunk$set(include = T)
+# knitr::opts_chunk$set(echo = TRUE)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r basicfcn, include=F}
+# can add quietly=T option to the require() function
+loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
+```
+
 ```{r, include=F}
 h1b <- read.csv('h1b_new.csv')
 
@@ -151,3 +389,4 @@ text(treefit, use.n=TRUE, all=TRUE, cex=.8)
 post(treefit, file = "kythosisTree2.ps", title = "Classification Tree for H1B")
 ```
 ```
+
