@@ -30,141 +30,130 @@ options(scientific=T, digits = 3)
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
 ```
 
-```{r, include=F}
-h1b <- read.csv('h1b_new.csv')
-
-str(h1b)
-
-#h1b$State
+### Import Dataset
+```{r, include=T}
+house <- read.csv("kc_house_data.csv")
+summary(house)
+house$view <- as.factor(house$view)
+str(house)
 ```
 
-```{r, include=F}
-loadPkg("dplyr")
-loadPkg("tidyr")
-```
-    
+### Chapter 1 SMART Question
+
 ### Logistic Regression
-```{r, echo=F}
-h1b$Initial.Approvals <- as.factor(h1b$Initial.Approvals)
-h1b$Initial.Denials <- as.factor(h1b$Initial.Denials)
-h1b$Continuing.Approvals <- as.factor(h1b$Continuing.Approvals)
-h1b$Continuing.Denials <- as.factor(h1b$Continuing.Denials)
-h1b$NAICS <- as.factor(h1b$NAICS)
-str(h1b)
-```
-
-```{r, echo=F}
-IniApprLogit <- glm(Initial.Approvals ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(IniApprLogit)
-```
-
-```{r, echo=F}
-IniDenLogit <- glm(Initial.Denials ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(IniDenLogit)
-```
-
-```{r, echo=F}
-ConApprLogit <- glm(Continuing.Approvals ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(ConApprLogit)
-```
-
-```{r, echo=F}
-ConDenLogit <- glm(Continuing.Denials ~ Fiscal.Year + NAICS + State, data = h1b, family = "binomial")
-summary(ConDenLogit)
-```
-
-
-
-### Try Tree Model
+#### Full Model
 ```{r}
-loadPkg("rpart") # Classification trees, rpart(formula, data=, method=,control=) 
+house$waterfront <- as.factor(house$waterfront)
+house$condition <- as.factor(house$condition)
+house$grade <- as.factor(house$grade)
+testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors, data = house, family = "binomial")
+summary(testlog)
 ```
 
-```{r, echo = T, fig.dim=c(6,4)}
-treefit <- rpart(Initial.Approvals ~ Fiscal.Year + State + NAICS,
-  	method="class", data=h1b)
-
-printcp(treefit) # display the results 
-plotcp(treefit) # visualize cross-validation results 
-summary(treefit) # detailed summary of splits
-
-# plot tree 
-plot(treefit, uniform=TRUE, main="Classification Tree for H1B")
-text(treefit, use.n=TRUE, all=TRUE, cex=.8)
-
-```
-
-
-```{r}
-# create attractive postcript plot of tree 
-post(treefit, file = "kythosisTree2.ps", title = "Classification Tree for H1B")
-```
-
-
-
-### Try KNN
-```{r}
-# convert NAICS to binary based on mean of applicantsis
-is.na(h1b)
-h1bcopy <- drop_na(h1b)
-nrow(h1bcopy)/25
-h1bN <- h1bcopy %>% group_by(NAICS)
-h1bN
-```
-
+#### Adjusted Model
 ```{r, echo=F}
-IniApprLogit <- glm(Initial.Approvals ~ Fiscal.Year + NAICS + State, data = h1bcopy, family = "binomial")
-summary(IniApprLogit)
+testlog2 <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above + sqft_living15 + yr_built + lat + long, data = house, family = "binomial")
+summary(testlog2)
 ```
 
+### Model Evaluation
+
+#### Full model 
+#####ROC & AUC
+```{r roc_auc1, echo=F}
+loadPkg("pROC") 
+prob=predict(testlog , type = c("response"))
+house$prob=prob
+h <- roc(view~prob, data=house)
+auc(h)
+plot(h)
+```
+
+##### McFadden
+```{r McFadden, echo=FALSE}
+loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
+admitLogitpr2 = pR2(testlog)
+admitLogitpr2
+```
+
+#### Adjusted Model
+##### ROC & AUC
+```{r testlog2, echo=F}
+prob=predict(testlog2 , type = c("response"))
+house$prob=prob
+h <- roc(view~prob, data=house)
+auc(h)
+plot(h)
+```
+
+##### McFadden
+
+```{r McFadden, echo=FALSE}
+loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
+admitLogitpr2 = pR2(testlog2)
+admitLogitpr2
+```
+
+### PCA/PCR
+
+### KNN
 ```{r}
-h1b$NAICS <- as.character(h1b$NAICS)
 set.seed(1)
-h1b_data_train_rows = sample(1:nrow(h1b),     #<- from 1 to the number of 
+house_data_train_rows = sample(1:nrow(house),     #<- from 1 to the number of 
                                                      #   rows in the data set
-                              round(0.8 * nrow(h1b), 0),  #<- multiply the 
+                              round(0.8 * nrow(house), 0),  #<- multiply the 
                                                                 #   number of rows
                                                                 #   by 0.8 and round
                                                                 #   the decimals
                               replace = FALSE)       #<- don't replace the numbers
 
 # Let's check to make sure we have 80% of the rows. 
-length(h1b_data_train_rows) / nrow(h1b)
+length(house_data_train_rows) / nrow(house)
 
-h1b_data_train = h1b[h1b_data_train_rows, ]  #<- select the rows identified in
+house_data_train = house[house_data_train_rows, ]  #<- select the rows identified in
                                                      #   the bank_data_train_rows data
-h1b_data_test = h1b[-h1b_data_train_rows, ]  #<- select the rows that weren't
+house_data_test = house[-house_data_train_rows, ]  #<- select the rows that weren't
                                                      #   identified in the
+                                                     #   bank_data_train_rows data
 
-head(h1b_data_test)                                          
+# Check the number of rows in each set.
+head(house_data_train)
+nrow(house_data_test)
+
 ```
+Train the classifier
 
 ```{r}
+# Let's train the classifier for k = 3. 
+# Install the "class" package that we'll use to run kNN.
+# Take some time to learn about all its functionality.
+# install.packages("class") 
 loadPkg("class")
 
 # k-Nearest Neighbor is a randomized algorithm, so make sure to
 # use set.seed() to make your results repeatable.
 set.seed(1)
-# h1b$Initial.Approvals <- NULL
-#h1b$NAICS <- as.integer(h1b$NAICS)
-#str(h1b)
-h1b_3NN = knn(train = h1b_data_train[, c("State", "NAICS")],  #<- training set cases
-               test = h1b_data_test[, c("State","NAICS")],    #<- test set cases
-               cl = h1b_data_train[, "Initial.Approvals"],                  #<- category for true classification
+house_3NN = knn(train = house_data_train[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],  #<- training set cases
+               test = house_data_test[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],    #<- test set cases
+               cl = house_data_train[, "view"],                         #<- category for true classification
                k = 3) #,                                                    #<- number of neighbors considered
-               #use.all = TRUE)                                            #<- control ties between class assignments
+               # use.all = TRUE)                                            #<- control ties between class assignments
                                                                             #   If true, all distances equal to the kth 
                                                                             #   largest are included
 
 # View the output.
-str(h1b_3NN)
-length(h1b_3NN)
-table(h1b_3NN)
+str(house_3NN)
+length(house_3NN)
+table(house_3NN)
 ```
 
+
 ```{r}
-kNN_res = table(h1b_3NN,
-                h1b_data_test$`Initial.Approvals`)
+# How does the kNN classification compare to the true class?
+# Let's take a look at the confusion matrix by combining the 
+# predictions from bank_3NN to the original data set.
+kNN_res = table(house_3NN,
+                house_data_test$`view`)
 kNN_res
 sum(kNN_res)  #<- the total is all the test examples
 
@@ -176,5 +165,73 @@ kNN_res[row(kNN_res) == col(kNN_res)]
 # by the total number of classifications.
 kNN_acc = sum(kNN_res[row(kNN_res) == col(kNN_res)]) / sum(kNN_res)
 kNN_acc
+```
+
+### TREE
+```{r, echo = T, fig.dim=c(6,4)}
+kyphosisfit <- rpart(Kyphosis ~ Age + Number + Start,
+  	method="class", data=kyphosis)
+
+printcp(kyphosisfit) # display the results 
+plotcp(kyphosisfit) # visualize cross-validation results 
+summary(kyphosisfit) # detailed summary of splits
+
+# plot tree 
+plot(kyphosisfit, uniform=TRUE, main="Classification Tree for Kyphosis")
+text(kyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+
+
+```{r}
+# create attractive postcript plot of tree 
+post(kyphosisfit, file = "kythosisTree2.ps", title = "Classification Tree for Kythosis")
+```
+
+We can also create a simple but prettier plot for latter use. 
+
+So here are the results. 
+We see that at the first branching point, there are 64 absence, and 17 presence (with Kyphosis). The first split yields 19 outcomes with Start >= 8.5, and 62 with Start < 8.5. A further split on the right node might have been beneficial to separate the present and absent. The algorithm actually stops there, and predicts present for all 19 observations, giving 8/19 incorrect predictions. 
+
+Nonethelss, the lower branch continue to split, with 29 (100%) correct prediction and 12 (100%) on the first two leaves (nodes at end of branch)
+there, and 12/14 correct absence prediction on the third leaf, while the last leaf predicted 4/7 **present** correctly. Not too bad.
+
+Overall, when the model predicts **present**, accuracy is (11+4)/(8+11+3+4) = `r round( (11+4)/(8+11+3+4)*100,1 )`%. And when the model predicts **absent**, accuracy is (29+12+12)/(29+0+12+0+12+2) = `r round( (29+12+12)/(29+0+12+0+12+2)*100,1 )`%.
+
+We can also use some handy library to calculate these percentages in the confusion matrix.
+
+
+```{r, include=T}
+loadPkg("caret") 
+cm = confusionMatrix( predict(kyphosisfit, type = "class"), reference = kyphosis[, "Kyphosis"] )
+print('Overall: ')
+cm$overall
+print('Class: ')
+cm$byClass
+```
+
+The overall accuracy is 68/81 = 83.95%. We can also dig deep into these different metrics of sensitivity (also known as recall rate, TP / (TP+FN) ), specificity (TN / (TN+FP) ), F1 score, etc etc. That will take another class time at least. 
+
+
+```{r fancyplot}
+loadPkg("rpart.plot")
+rpart.plot(kyphosisfit)
+loadPkg("rattle") # For fancyRpartPlot (Trees) Answer "no" on installing from binary source
+fancyRpartPlot(kyphosisfit)
+
+```
+
+
+## Prune the tree
+
+```{r prune}
+#prune the tree 
+pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[2,"CP"])
+#pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[which.min( kyphosisfit$cptable[,"xerror"] ),"CP"])
+
+# plot the pruned tree 
+plot(pkyphosisfit, uniform=TRUE, main="Pruned Classification Tree for Kyphosis")
+text(pkyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
+
 ```
 
