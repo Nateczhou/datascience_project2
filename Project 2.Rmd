@@ -40,6 +40,7 @@ str(house)
 
 ### Chapter 1 SMART Question
 
+
 ### Logistic Regression
 #### Full Model
 ```{r}
@@ -70,7 +71,7 @@ plot(h)
 ```
 
 ##### McFadden
-```{r McFadden, echo=FALSE}
+```{r, echo=FALSE}
 loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
 admitLogitpr2 = pR2(testlog)
 admitLogitpr2
@@ -94,7 +95,89 @@ admitLogitpr2 = pR2(testlog2)
 admitLogitpr2
 ```
 
-### PCA/PCR
+### Linear Regression
+#### Full Model
+```{r}
+testlm <- lm(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors, data = house)
+summary(testlm)
+```
+
+#### Adjusted Linear Model
+```{r}
+testlm2 <- lm(price ~bedrooms + bathrooms + sqft_living + yr_built + yr_renovated + sqft_living15 + lat + long + floors, data = house)
+summary(testlm2)
+```
+
+
+### K-fold Cross Validation
+#### Spencer model 1
+```{r, warning=F}
+loadPkg("caret")
+# Define training control
+set.seed(123) 
+train.control <- trainControl(method = "cv", number = 10)
+
+model <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront, data = house, method = "lm", trControl = train.control)
+# Summarize the results
+print(model)
+```
+
+#### Spencer model 2
+```{r,warning=F}
+set.seed(123)
+model2 <- train(price ~ sqft_living + sqft_lot + sqft_above + sqft_basement, data = house, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model2)
+```
+
+#### Spencer model 3
+```{r,warning=F}
+set.seed(123)
+model3 <- train(price ~ yr_built + yr_renovated + zipcode, data = house, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model3)
+```
+
+#### Spencer model 4
+```{r,warning=F}
+set.seed(123)
+model4 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_basement + yr_built + yr_renovated + zipcode, data = house, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model4)
+```
+
+#### Full Model
+```{r, warning=F}
+set.seed(123)
+# Train the model
+model5 <- train(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model5)
+```
+
+#### Feature Selection based on the full model
+```{r, warning=F}
+set.seed(123)
+model6 <- train(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "lm",trControl = train.control)
+# Summarize the results
+print(model6)
+```
+
+#### Table for Cross Validation
+```{r}
+modelcom <- matrix(c(231169,0.602,152269, 260958,0.494,173416, 362116,0.024,231970, 208760,0.675,135347, 191991,0.726,119763, 191973,0.726,119731),ncol=3,byrow=TRUE)
+colnames(modelcom) <- c("RMSE","RSquared","MAE")
+rownames(modelcom) <- c("Model 1","Model 2","Model 3", "Model 4", "Full Model", "Significant feature Model")
+modelcom <- as.table(modelcom)
+modelcom
+```
+
+
+
 
 ### KNN
 ```{r}
@@ -167,71 +250,32 @@ kNN_acc = sum(kNN_res[row(kNN_res) == col(kNN_res)]) / sum(kNN_res)
 kNN_acc
 ```
 
-### TREE
-```{r, echo = T, fig.dim=c(6,4)}
-kyphosisfit <- rpart(Kyphosis ~ Age + Number + Start,
-  	method="class", data=kyphosis)
-
-printcp(kyphosisfit) # display the results 
-plotcp(kyphosisfit) # visualize cross-validation results 
-summary(kyphosisfit) # detailed summary of splits
-
-# plot tree 
-plot(kyphosisfit, uniform=TRUE, main="Classification Tree for Kyphosis")
-text(kyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
-
+### K-MEAN
+```{r, warning=F}
+loadPkg("dplyr")
+input <- house %>% select("bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")
+kmeans(input, centers = 3, nstart = 20)
 ```
+```{r}
+wssplot <- function(data, nc=15, seed=123){
+               wss <- (nrow(data)-1)*sum(apply(data,2,var))
+               for (i in 2:nc){
+                    set.seed(seed)
+                    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+                plot(1:nc, wss, type="b", xlab="Number of groups",
+                     ylab="Sum of squares within a group")}
 
+wssplot(input, nc = 20)
+```
 
 ```{r}
-# create attractive postcript plot of tree 
-post(kyphosisfit, file = "kythosisTree2.ps", title = "Classification Tree for Kythosis")
+k2 <- kmeans(input, centers = 4, nstart = 20)
 ```
 
-We can also create a simple but prettier plot for latter use. 
-
-So here are the results. 
-We see that at the first branching point, there are 64 absence, and 17 presence (with Kyphosis). The first split yields 19 outcomes with Start >= 8.5, and 62 with Start < 8.5. A further split on the right node might have been beneficial to separate the present and absent. The algorithm actually stops there, and predicts present for all 19 observations, giving 8/19 incorrect predictions. 
-
-Nonethelss, the lower branch continue to split, with 29 (100%) correct prediction and 12 (100%) on the first two leaves (nodes at end of branch)
-there, and 12/14 correct absence prediction on the third leaf, while the last leaf predicted 4/7 **present** correctly. Not too bad.
-
-Overall, when the model predicts **present**, accuracy is (11+4)/(8+11+3+4) = `r round( (11+4)/(8+11+3+4)*100,1 )`%. And when the model predicts **absent**, accuracy is (29+12+12)/(29+0+12+0+12+2) = `r round( (29+12+12)/(29+0+12+0+12+2)*100,1 )`%.
-
-We can also use some handy library to calculate these percentages in the confusion matrix.
-
-
-```{r, include=T}
-loadPkg("caret") 
-cm = confusionMatrix( predict(kyphosisfit, type = "class"), reference = kyphosis[, "Kyphosis"] )
-print('Overall: ')
-cm$overall
-print('Class: ')
-cm$byClass
-```
-
-The overall accuracy is 68/81 = 83.95%. We can also dig deep into these different metrics of sensitivity (also known as recall rate, TP / (TP+FN) ), specificity (TN / (TN+FP) ), F1 score, etc etc. That will take another class time at least. 
-
-
-```{r fancyplot}
-loadPkg("rpart.plot")
-rpart.plot(kyphosisfit)
-loadPkg("rattle") # For fancyRpartPlot (Trees) Answer "no" on installing from binary source
-fancyRpartPlot(kyphosisfit)
-
+```{r}
+loadPkg("factoextra")
+fviz_cluster(k2, data = input)
 ```
 
 
-## Prune the tree
-
-```{r prune}
-#prune the tree 
-pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[2,"CP"])
-#pkyphosisfit <- prune(kyphosisfit, cp = kyphosisfit$cptable[which.min( kyphosisfit$cptable[,"xerror"] ),"CP"])
-
-# plot the pruned tree 
-plot(pkyphosisfit, uniform=TRUE, main="Pruned Classification Tree for Kyphosis")
-text(pkyphosisfit, use.n=TRUE, all=TRUE, cex=.8)
-
-```
 
