@@ -108,7 +108,7 @@ summary(testlm)
 
 #### Adjusted Linear Model
 ```{r}
-testlm2 <- lm(price ~bedrooms + bathrooms + sqft_living + yr_built + yr_renovated + sqft_living15 + lat + long + floors + zipcode, data = house)
+testlm2 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
 summary(testlm2)
 ```
 
@@ -173,7 +173,7 @@ print(model6)
 
 #### Table for Cross Validation
 ```{r}
-modelcom <- matrix(c(236009,0.586,153783, 260958,0.494,173416, 362116,0.024,231970, 208763,0.675,135348, 191991,0.726,119763, 191973,0.726,119731),ncol=3,byrow=TRUE)
+modelcom <- matrix(c(236009,0.586,153783, 260958,0.494,173416, 362133,0.024,231985, 208763,0.675,135348, 191991,0.726,119763, 191973,0.726,119731),ncol=3,byrow=TRUE)
 options("scipen" = 100, "digits" = 2)
 colnames(modelcom) <- c("RMSE","RSquared","MAE")
 rownames(modelcom) <- c("Model 1","Model 2","Model 3", "Model 4", "Full Model", "Significant feature Model")
