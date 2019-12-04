@@ -1,5 +1,5 @@
 ---
-title: "Project 2: H-1B Visa"
+title: "Project 2: House Sales in King County, USA"
 author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
 date: "11/20/2019"
 output:
