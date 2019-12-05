@@ -14,15 +14,14 @@ output:
     toc_depth: '4'
 ---
 
+# R Markdown
+
 ```{r setup, include=FALSE}
-# some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
-knitr::opts_chunk$set(include = T)
+knitr::opts_chunk$set(warning = F, results = F, message = F)
 # knitr::opts_chunk$set(echo = TRUE)
 options(scientific=T, digits = 3) 
 # options(scipen=9, digits = 3) 
-# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
-# use scipen=999 to prevent scientific notation at all times
 ```
 
 ```{r basicfcn, include=F}
@@ -31,12 +30,15 @@ loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.
 ```
 
 
+
+
+
 ```{r, echo=F}
 house <- read.csv('kc_house_data.csv')
 head(house)
 
 str(house)
-# house <- na.omit(house) 
+house <- na.omit(house) 
 summary(house)
 
 ```
@@ -52,18 +54,6 @@ house$yr_renovated[house$yr_renovated>0] <- 1
 ```
 
 
-```{r, echo=F}
-# house = house[-2]
-
-house$view <- as.factor(house$view)
-house$grade <- as.factor(house$grade)
-house$waterfront  <- as.factor(house$waterfront )
-house$condition  <- as.factor(house$condition )
-house$yr_renovated <- as.factor(house$yr_renovated)
-
-str(house)
-head(house)
-```
 
 
 ```{r corr, echo=FALSE}
@@ -84,37 +74,99 @@ summary(houseaov)
 # corrplot.mixed(housecor)
 ```
 
+#EDA
+
+```{r , results='markup', collapse=F}
+#change variables to fator level
+house$view <- as.factor(house$view)
+house$grade <- as.factor(house$grade)
+house$condition <- as.factor(house$condition)
+house$yr_renovated <- as.factor(house$yr_renovated)
+house$waterfront <- as.factor(house$waterfront)
 
 
-```{r, echo=F}
-viewmodel <- lm(price ~ price+ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data = house, family = "binomial")
-summary(viewmodel)
-# 
-# testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + floors +waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data = house, family = "binomial")
-# summary(testlog)
-
-```
-
-```{r, echo=F}
-viewmodel_del <- glm(view ~ price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above  + yr_built + sqft_living15 + lat + long, data = house, family = "binomial")
-summary(viewmodel_nocondition )
 ```
 
 
 
 
+# Smart Question
+What features are associated with housing prices for King County, WA?
+
+# Linear Model
+
+```{r model 1, results='markup', collapse=F}
+loadPkg("faraway")
+#model for categorical variables that describe house attributes and ranking
+model_1 <- lm(price ~ grade + view + condition + waterfront, data=house)
+summary(model_1)
+coef(model_1)
+confint(model_1)
+vif(model_1)
+
+plot(model_1)
+```
+In this model, we first wanted to look at the categorical variables for house attributes and ranking. R2 is 59% thus model explains 59% of data. All p values are highly signficant at .001 level. All categorical variables, grade, view, condition, waterfront are positively correlated with price and drive up price as they increase.
+
+```{r model 2, results='markup', collapse=F}
+#model on distance and size of house in sq ft and neighboring house sizes using numeric variables exluding sqft basement
+model_2 <- lm(price ~ sqft_living + sqft_above + sqft_living15 + sqft_lot15, data=house)
+summary(model_2)
+coef(model_2)
+confint(model_2)
+vif(model_2)
+
+plot(model_2)
+```
+
+Idea behind this model was to look at sq footage and size of house and surrounding neighborhood to determine if they effect price in some way. Also to look at how these sq ft variables may be collinear and relate to one another. Sqft basement is NA and doesnt work for model. Sqft lot is not signficant. Took out these variables for imporved model.Some moderately high VIFs for sqft living and sqft above - most likely some collinearity there. R2 is 50% thus model explains 50% of results seen in data. All p values are significant. Sqft living and Sq ft living 15 are positively correlated with price while sqft above and sqft lot 15 are negatively correlated with price. 
+
+
+```{r model 3, results='markup', collapse=F}
+#recode renovation variable
+house$yr_renovated[house$yr_renovated>0] <- 1
+head(house)
+#model on the time and place of house built and renovated
+model_3 <- lm(price ~ yr_built + yr_renovated + zipcode, data=house)
+summary(model_3)
+coef(model_3)
+confint(model_3)
+vif(model_3)
+
+plot(model_3)
+
+```{r model 4, results='markup', collapse=F}
+#model with all variables
+model_4 <- lm(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + yr_built + yr_renovated + zipcode, data=house)
+summary(model_4)
+coef(model_4)
+confint(model_4)
+vif(model_4)
+
+plot(model_4)
+```
+This model used all variables except the variables on surrounding houses (15). Sq ft basement taken out b/c NA results. R2 is 68%. P values are significant and bedrooms, sqft lot, sqft above, yr built are negatively correlated with price. High VIFs for sqft living and sqft above indicate multicollinearity but nothing too extreme. 
+
+```{r model 5, results='markup', collapse=F}
+head(house)
+#model with all known significant variables but removed sqft above, sqft basement b/c not significant
+model_5 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data=house)
+summary(model_5)
+coef(model_5)
+confint(model_5)
+vif(model_5)
+
+plot(model_5)
+```
+R2 is about 73% thus model explains 73% of results in data. Removed sqft above and sqft basement b/c not significant. Upper ends of ... All p values are highly significant at the .001 level. A few notable results: as bedrooms increase price decreases, yr built is also negatively correlated with price, as is sq ft of surrounding lots, and zipcode. A moderately high VIF at 5 for sqft living - not high enough for concern.
+
+```{r modelanova, results='markup', collapse=F}
+anova(model_1,model_2,model_3,model_4,model_5)
+```
 
 
 
-house$prob=prob
-h <- roc(view~prob, data=house)
-auc(h)
-plot(h)
 
-house$prob=prob
-h <- roc(view~prob, data=house)
-auc(h)
-plot(h)
 
 
 ### Linear Regression
@@ -123,7 +175,10 @@ plot(h)
 
 testlm <- lm(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
 summary(testlm)
+
 ```
+
+
 
 #### Adjusted Linear Model
 ```{r}
@@ -204,6 +259,10 @@ summary(pcr_noscale_fit)
 validationplot(pcr_scale_fit,val.type = "R2")
 validationplot(pcr_noscale_fit,val.type = "R2")
 ```
+Idea behind this model was to look at yr built, yr renovated, and location of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 924. R2 is very low at 2.5% thus model does not do a good job of explaining results in data. 
+
+
+
 
 ### K-fold Cross Validation
 #### Spencer model 1
@@ -325,6 +384,21 @@ str(house_3NN)
 length(house_3NN)
 table(house_3NN)
 ```
+ANOVA shows us that the latter three models are statistically significant and are better at explaining the data. However, last model has a high RSS which indicates it is not a close fit model. 
+
+#```{r plot, results='markup', collapse=F}
+loadPkg("ggplot2")
+loadPkg("directlabels")
+loadPkg("dplyr")
+library(directlabels)
+ggplot(house, aes(x=price, y=sqft_living)) + 
+    geom_line(aes(color=price, group=price), size = 1) +   # create the line by nacis code
+    ggtitle("Line Plot of Continuing Denial Percentage by Year")+
+    geom_point(aes(color=price), size=3) + 
+    xlab("Year")+ ylab("Percentage(%)") + 
+    ggsave("condenline.png", width=12, height=9)    
+#```
+
 
 
 ```{r}
