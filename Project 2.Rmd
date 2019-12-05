@@ -1,8 +1,17 @@
 ---
-title: "Project 2"
-author: "Spencer Stucky"
-date: "12/3/2019"
-output: html_document
+title: "Project 2: House Sales in King County, USA"
+author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
+date: "11/20/2019"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+    fig.align: "center"
+    toc_float: yes
+    theme: readable
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
 ---
 
 # R Markdown
@@ -18,15 +27,51 @@ options(scientific=T, digits = 3)
 ```{r basicfcn, include=F}
 # can add quietly=T option to the require() function
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
-loadPkg("dplyr")
 ```
 
-```{r, results='markup', collapse=F}
-house <- read.csv("~/Documents/Documents/GWU School Work/DATS 6101/Project_2/kc_house_data.csv")
-#na.omit(house)
-summary(house)
+
+
+
+
+```{r, echo=F}
+house <- read.csv('kc_house_data.csv')
+head(house)
+
 str(house)
-head(house, n = 10)
+house <- na.omit(house) 
+summary(house)
+
+```
+
+
+```{r, include=F}
+loadPkg("dplyr")
+loadPkg("tidyr")
+```
+
+```{r}
+house$yr_renovated[house$yr_renovated>0] <- 1
+```
+
+
+
+
+```{r corr, echo=FALSE}
+plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+houseaov= aov(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+summary(houseaov)
+```
+
+
+```{r}
+# loadPkg("corrplot")
+# corrplot(housecor)
+# corrplot(housecor, method = "square") # try "circle", "square", "ellipse", "number", "shade", "color", "pie"
+# corrplot(housecor, method = "number")
+# corrplot(housecor, method = "number", type="upper")
+# corrplot.mixed(housecor)
 ```
 
 #EDA
@@ -39,10 +84,11 @@ house$condition <- as.factor(house$condition)
 house$yr_renovated <- as.factor(house$yr_renovated)
 house$waterfront <- as.factor(house$waterfront)
 
-summary(house)
-str(house)
-head(house, n = 10)
+
 ```
+
+
+
 
 # Smart Question
 What features are associated with housing prices for King County, WA?
@@ -72,7 +118,9 @@ vif(model_2)
 
 plot(model_2)
 ```
+
 Idea behind this model was to look at sq footage and size of house and surrounding neighborhood to determine if they effect price in some way. Also to look at how these sq ft variables may be collinear and relate to one another. Sqft basement is NA and doesnt work for model. Sqft lot is not signficant. Took out these variables for imporved model.Some moderately high VIFs for sqft living and sqft above - most likely some collinearity there. R2 is 50% thus model explains 50% of results seen in data. All p values are significant. Sqft living and Sq ft living 15 are positively correlated with price while sqft above and sqft lot 15 are negatively correlated with price. 
+
 
 ```{r model 3, results='markup', collapse=F}
 #recode renovation variable
@@ -86,8 +134,6 @@ confint(model_3)
 vif(model_3)
 
 plot(model_3)
-```
-Idea behind this model was to look at yr built, yr renovated, and location of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 924. R2 is very low at 2.5% thus model does not do a good job of explaining results in data. 
 
 ```{r model 4, results='markup', collapse=F}
 #model with all variables
@@ -114,28 +160,229 @@ plot(model_5)
 ```
 R2 is about 73% thus model explains 73% of results in data. Removed sqft above and sqft basement b/c not significant. Upper ends of ... All p values are highly significant at the .001 level. A few notable results: as bedrooms increase price decreases, yr built is also negatively correlated with price, as is sq ft of surrounding lots, and zipcode. A moderately high VIF at 5 for sqft living - not high enough for concern.
 
-#add corr plots 
-
-#look at feature selection - forward backward selection?
-
-#sample summary
-
-Summary:
-
-Model  |  1 (Temp)  |  2 (Temp+Temp_Feel)  | 3 (Temp+Temp_Feel+Humidity)   | 4 (Temp+Temp_Feel+Humidity+Wind_Speed)  |  
--------|-----|-----|--------|------|  
-r^2^  | `r format( summary(model_1)$r.squared )` | `r format( summary(model_2)$r.squared )` | `r format( summary(model_3)$r.squared )` | `r format( summary(model_4)$r.squared )`|
-Temp | `r format( model_1$coefficients['Temp'] ) ` (vif: `r format(vif(model_1)['Temp'])`) | `r format( model_2$coefficients['Temp'] ) ` (vif: `r format(vif(model_2)['Temp'])`) | `r format( model_3$coefficients['Temp'] ) ` (vif: `r format(vif(model_3)['Temp'])`) | `r format( model_4$coefficients['Temp'] ) ` (vif: `r format(vif(model_4)['Temp'])`) |  
-| | p:`r format( summary(model_1)$coefficients[,4]['Temp'],digits=3) ` | p:`r format( summary(model_2)$coefficients[,4]['Temp'],digits=3) ` | p:`r format( summary(model_3)$coefficients[,4]['Temp'],digits=3) ` | p:`r format( summary(model_4)$coefficients[,4]['Temp'],digits=3) `|
-Temp_Feel | | `r format( model_2$coefficients['Temp_Feel'] ) ` (vif: `r format(vif(model_2)['Temp_Feel'])`) | `r format( model_3$coefficients['Temp_Feel'] ) ` (vif: `r format(vif(model_3)['Temp_Feel'])`) | `r format( model_4$coefficients['Temp_Feel'] ) ` (vif: `r format(vif(model_4)['Temp_Feel'])`) ` |  
-| | | p:`r format( summary(model_2)$coefficients[,4]['Temp_Feel']) ` | p:`r format( summary(model_3)$coefficients[,4]['Temp_Feel'])` | p:`r format( summary(model_4)$coefficients[,4]['Temp_Feel'],digits=3)` |  
-Humidity | | | `r format( model_3$coefficients['Humidity'] ) ` (vif: `r format(vif(model_3)['Humidity'])`) | `r format( model_4$coefficients['Humidity'] ) ` (vif: `r format(vif(model_4)['Humidity'])`) |  
-| | | | p:`r format( summary(model_3)$coefficients[,4]['Humidity'],digits=3) ` | p:`r format( summary(model_4)$coefficients[,4]['Humidity'],digits=3) ` |  
-Wind_Speed | | || `r format( model_4$coefficients['Wind_Speed'] ) `  (vif: `r format(vif(model_4)['Wind_Speed'])`)|  
-| | | || p:`r format( summary(model_4)$coefficients[,4]['Wind_Speed'],digits=3) `|
-
 ```{r modelanova, results='markup', collapse=F}
 anova(model_1,model_2,model_3,model_4,model_5)
+```
+
+
+
+
+
+
+### Linear Regression
+#### Full Model
+```{r}
+
+testlm <- lm(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
+summary(testlm)
+
+```
+
+
+
+#### Adjusted Linear Model
+```{r}
+testlm2 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
+summary(testlm2)
+```
+### PCA/PCR Without Factor
+```{r PCA_without_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+summary(pc_scale)
+summary(pc_noscale)
+
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
+```
+```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+```{r PCR}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
+
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "MSEP")
+validationplot(pcr_noscale_fit,val.type = "MSEP")
+```
+```{r}
+
+house$yr_renovated[house$yr_renovated>0] <- 1
+str(house)
+```
+
+### PCA/PCR With Factor
+```{r PCA_with_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, bedrooms, bathrooms, floors, waterfront, view, condition, grade, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_built, yr_renovated))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+# pc_scale
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
+```
+```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+```{r PCR}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
+
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "R2")
+validationplot(pcr_noscale_fit,val.type = "R2")
+```
+Idea behind this model was to look at yr built, yr renovated, and location of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 924. R2 is very low at 2.5% thus model does not do a good job of explaining results in data. 
+
+
+
+
+### K-fold Cross Validation
+#### Spencer model 1
+```{r, warning=F}
+loadPkg("caret")
+# Define training control
+set.seed(123) 
+train.control <- trainControl(method = "cv", number = 10)
+
+model <- train(price ~ grade + view + condition + waterfront, data = house, method = "lm", trControl = train.control)
+# Summarize the results
+print(model)
+```
+
+#### Spencer model 2
+```{r,warning=F}
+set.seed(123)
+model2 <- train(price ~ sqft_living + sqft_lot + sqft_above + sqft_basement, data = house, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model2)
+```
+
+#### Spencer model 3
+```{r,warning=F}
+set.seed(123)
+model3 <- train(price ~ yr_built + yr_renovated + zipcode, data = house, method = "lm",
+               trControl = train.control)
+# Summarize the results
+print(model3)
+```
+
+#### Spencer model 4
+```{r,warning=F}
+set.seed(123)
+model4 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + yr_built + yr_renovated + zipcode, data = house, method = "leapForward",
+               trControl = train.control)
+# Summarize the results
+print(model4)
+```
+
+#### Full Model
+```{r, warning=F}
+set.seed(123)
+# Train the model
+model5 <- train(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "leapSeq", tuneGrid = data.frame(nvmax = 1:18),
+               trControl = train.control)
+# Summarize the results
+print(model5)
+```
+
+#### Feature Selection based on the full model
+```{r, warning=F}
+set.seed(123)
+model6 <- train(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "lm",trControl = train.control)
+# Summarize the results
+print(model6)
+```
+
+#### Table for Cross Validation
+```{r}
+modelcom <- matrix(c(236009,0.586,153783, 260958,0.494,173416, 362133,0.024,231985, 208763,0.675,135348, 191991,0.726,119763, 191973,0.726,119731),ncol=3,byrow=TRUE)
+options("scipen" = 100, "digits" = 2)
+colnames(modelcom) <- c("RMSE","RSquared","MAE")
+rownames(modelcom) <- c("Model 1","Model 2","Model 3", "Model 4", "Full Model", "Significant feature Model")
+modelcom <- as.table(modelcom)
+modelcom
+```
+
+
+
+### KNN
+```{r}
+set.seed(1)
+house_data_train_rows = sample(1:nrow(house),     #<- from 1 to the number of 
+                                                     #   rows in the data set
+                              round(0.8 * nrow(house), 0),  #<- multiply the 
+                                                                #   number of rows
+                                                                #   by 0.8 and round
+                                                                #   the decimals
+                              replace = FALSE)       #<- don't replace the numbers
+
+# Let's check to make sure we have 80% of the rows. 
+length(house_data_train_rows) / nrow(house)
+
+house_data_train = house[house_data_train_rows, ]  #<- select the rows identified in
+                                                     #   the bank_data_train_rows data
+house_data_test = house[-house_data_train_rows, ]  #<- select the rows that weren't
+                                                     #   identified in the
+                                                     #   bank_data_train_rows data
+
+# Check the number of rows in each set.
+head(house_data_train)
+nrow(house_data_test)
+
+```
+Train the classifier
+
+```{r}
+# Let's train the classifier for k = 3. 
+# Install the "class" package that we'll use to run kNN.
+# Take some time to learn about all its functionality.
+# install.packages("class") 
+loadPkg("class")
+
+# k-Nearest Neighbor is a randomized algorithm, so make sure to
+# use set.seed() to make your results repeatable.
+set.seed(1)
+house_3NN = knn(train = house_data_train[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],  #<- training set cases
+               test = house_data_test[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],    #<- test set cases
+               cl = house_data_train[, "view"],                         #<- category for true classification
+               k = 3) #,                                                    #<- number of neighbors considered
+               # use.all = TRUE)                                            #<- control ties between class assignments
+                                                                            #   If true, all distances equal to the kth 
+                                                                            #   largest are included
+
+# View the output.
+str(house_3NN)
+length(house_3NN)
+table(house_3NN)
 ```
 ANOVA shows us that the latter three models are statistically significant and are better at explaining the data. However, last model has a high RSS which indicates it is not a close fit model. 
 
@@ -152,8 +399,51 @@ ggplot(house, aes(x=price, y=sqft_living)) +
     ggsave("condenline.png", width=12, height=9)    
 #```
 
-# Logistic Reg
 
-# PCA/PCR
 
-# KNN
+```{r}
+# How does the kNN classification compare to the true class?
+# Let's take a look at the confusion matrix by combining the 
+# predictions from bank_3NN to the original data set.
+kNN_res = table(house_3NN,
+                house_data_test$`view`)
+kNN_res
+sum(kNN_res)  #<- the total is all the test examples
+
+# Select the true positives and true negatives by selecting
+# only the cells where the row and column names are the same.
+kNN_res[row(kNN_res) == col(kNN_res)]
+
+# Calculate the accuracy rate by dividing the correct classifications
+# by the total number of classifications.
+kNN_acc = sum(kNN_res[row(kNN_res) == col(kNN_res)]) / sum(kNN_res)
+kNN_acc
+```
+
+### K-MEAN
+```{r, warning=F}
+loadPkg("dplyr")
+input <- house %>% select("bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")
+kmeans(input, centers = 3, nstart = 20)
+```
+```{r}
+wssplot <- function(data, nc=15, seed=123){
+               wss <- (nrow(data)-1)*sum(apply(data,2,var))
+               for (i in 2:nc){
+                    set.seed(seed)
+                    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+                plot(1:nc, wss, type="b", xlab="Number of groups",
+                     ylab="Sum of squares within a group")}
+
+wssplot(input, nc = 20)
+```
+
+```{r}
+k2 <- kmeans(input, centers = 4, nstart = 20)
+```
+
+```{r}
+loadPkg("factoextra")
+fviz_cluster(k2, data = input)
+```
+
