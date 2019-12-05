@@ -147,7 +147,7 @@ print(model3)
 #### Spencer model 4
 ```{r,warning=F}
 set.seed(123)
-model4 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + yr_built + yr_renovated + zipcode, data = house, method = "lm",
+model4 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + yr_built + yr_renovated + zipcode, data = house, method = "leapForward",
                trControl = train.control)
 # Summarize the results
 print(model4)
@@ -157,7 +157,7 @@ print(model4)
 ```{r, warning=F}
 set.seed(123)
 # Train the model
-model5 <- train(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "lm",
+model5 <- train(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "leapSeq", tuneGrid = data.frame(nvmax = 1:18),
                trControl = train.control)
 # Summarize the results
 print(model5)
