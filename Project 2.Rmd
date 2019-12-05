@@ -1,150 +1,75 @@
----
-title: "Project 2: H-1B Visa"
-author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
-date: "11/20/2019"
-output:
-  html_document:
-    toc: yes
-    toc_depth: 4
-    fig.align: "center"
-    toc_float: yes
-    theme: readable
-  pdf_document:
-    toc: yes
-    toc_depth: '4'
----
 
-```{r setup, include=FALSE}
-# some of common options (and the defaults) are: 
-# include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
-knitr::opts_chunk$set(include = T)
-# knitr::opts_chunk$set(echo = TRUE)
-options(scientific=T, digits = 3) 
-# options(scipen=9, digits = 3) 
-# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
-# use scipen=999 to prevent scientific notation at all times
-```
+### PCA/PCR Without Factor
+```{r PCA_without_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+summary(pc_scale)
+summary(pc_noscale)
 
-```{r basicfcn, include=F}
-# can add quietly=T option to the require() function
-loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
-```
-
-
-```{r, include=F}
-h1b <- read.csv('h1b_datahubexport_2009-2019.csv')
-str(h1b)
-#h1b$State
-```
-
-```{r, include=F}
-loadPkg("dplyr")
-loadPkg("tidyr")
-```
-    
-```{r}
-h1b$AllIni <- h1b$Initial.Approvals + h1b$Initial.Denials
-h1b$IniPer <- h1b$Initial.Approvals / h1b$AllIni
-h1b$NAICS <- as.factor(h1b$NAICS)
-h1b$IniPer[is.na(h1b$IniPer)] <- 0
-
-h1b$AllCon <- h1b$Continuing.Approvals + h1b$Continuing.Denials
-h1b$ConPer <- h1b$Continuing.Approvals / h1b$AllCon
-h1b$ConPer[is.na(h1b$ConPer)] <- 0
-```
-
-### Linear Model
-```{r}
-testlm <- lm(IniPer ~ Fiscal.Year + NAICS + State + ConPer, data = h1b)
-summary(testlm)
-```
-
-```{r}
-testlm2 <- lm(ConPer ~ Fiscal.Year + NAICS + State + IniPer, data = h1b)
-summary(testlm2)
-```
-
-```{r, warning=F}
-loadPkg("car")
-vif(testlm)
-plot(testlm)
-```
-
-```{r}
-lm1 <- lm(IniPer ~ Fiscal.Year + State, data = h1b)
-summary(lm1)
-```
-
-### TREE MODEL
-```{r}
-loadPkg("rpart") # Classification trees, rpart(formula, data=, method=,control=) 
-loadPkg("ISLR")
-loadPkg("tree") 
-h1b <- na.omit(h1b) 
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
 ```
 ```{r}
-str(h1b)
-# put salary on log scale and fit reg. tree
-treefit1 <- tree(Initial.Approvals ~ Fiscal.Year + NAICS, data=h1b)
-summary(treefit1)
-```
-
-```{r}
-plot(treefit1) 
-text(treefit1,cex=0.75)
-```
-
-### PCA/PCR
-```{r}
-h1b$AllCon <- h1b$Continuing.Approvals + h1b$Continuing.Denials
-h1b$ConPer <- h1b$Continuing.Approvals / h1b$AllCon
-h1b$ConPer[is.na(h1b$ConPer)] <- 0
-
-dfh1b <- h1b %>% select(Fiscal.Year, Initial.Approvals, Initial.Denials, Continuing.Approvals, Continuing.Denials, AllIni, IniPer, AllCon, ConPer)
-str(dfh1b)
-```
-
-```{r}
-dfpca.out <- prcomp(dfh1b, scale = TRUE)
-dfpca.out.nc <- prcomp(dfh1b, scale = FALSE)
-
-summary(dfpca.out)
-dfpca.out$rotation
-```
-
-```{r, echo=F}
-summary(dfpca.out.nc)
-dfpca.out.nc$rotation
-```
-
-```{r, echo=F}
-pca.var <- (dfpca.out$sdev^2)
-pve <- pca.var/sum(pca.var)
-plot(cumsum(pve), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b", main = "Standardized")
-pca.var.nc <- (dfpca.out.nc$sdev^2)
-pve.nc <- pca.var.nc/sum(pca.var.nc)
-plot(cumsum(pve.nc), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b", main = "Non-standardized")
-```
-
-```{r, echo=F}
-#biplot(dfpca.out,1:2, scale =0)
-#biplot(dfpca.out.nc,1:2, scale =0)
-```
-
-```{r, echo=F, warning=F}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+```{r PCR}
+#install.packages("pls")
 loadPkg("pls")
-loadPkg("mice")
-loadPkg("ISLR")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
 
-propcr.fit=pcr(IniPer~.,data=dfh1b,scale=TRUE,validation ="CV")
-summary(propcr.fit)
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "MSEP")
+validationplot(pcr_noscale_fit,val.type = "MSEP")
+```
+```{r}
 
-propcr.fit.nc = pcr(IniPer~., data = dfh1b, scale = FALSE, validation = "CV")
-summary(propcr.fit.nc)
+house$yr_renovated[house$yr_renovated>0] <- 1
+str(house)
 ```
 
-```{r, echo=F}
-validationplot(propcr.fit,val.type="R2", main = "Standarized")
-validationplot(propcr.fit.nc,val.type="R2", main = "Non-Standarized")
+### PCA/PCR With Factor
+```{r PCA_with_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, bedrooms, bathrooms, floors, waterfront, view, condition, grade, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_built, yr_renovated))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+# pc_scale
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
+```
+```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+```{r PCR}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
 
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "R2")
+validationplot(pcr_noscale_fit,val.type = "R2")
 ```
