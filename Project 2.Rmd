@@ -1,0 +1,129 @@
+---
+title: "Project 2: House Sales in King County, USA"
+author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
+date: "11/20/2019"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+    fig.align: "center"
+    toc_float: yes
+    theme: readable
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+---
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+knitr::opts_chunk$set(include = T)
+# knitr::opts_chunk$set(echo = TRUE)
+# options(scientific=T, digits = 3) 
+# options(scientific=F, digits = 3, scipen=999)
+options(scipen=9, digits = 3)
+# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
+# use scipen=999 to prevent scientific notation at all times
+```
+
+```{r basicfcn, include=F}
+# can add quietly=T option to the require() function
+loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
+```
+
+```{r, echo=F}
+house <- read.csv('kc_house_data.csv')
+head(house)
+
+str(house)
+# house <- na.omit(house) 
+summary(house)
+
+
+```
+
+
+
+```{r, include=F}
+loadPkg("dplyr")
+loadPkg("tidyr")
+
+house$yr_renovated[house$yr_renovated>0] <- 1
+```
+
+
+```{r, echo=F}
+# house = house[-2]
+
+house$view <- as.factor(house$view)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
+house$zipcode <- as.factor(house$zipcode)
+house$bedrooms <- as.factor(house$bedrooms)
+house$bathrooms <- as.factor(house$bathrooms)
+house$lat <- as.factor(house$lat)
+house$long <- as.factor(house$long)
+
+str(house)
+head(house)
+```
+
+
+```{r corr, echo=FALSE}
+# plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+#                 sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data=house)
+houseaov= aov(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data=house)
+summary(houseaov)
+```
+```{r}
+# change to histogram 
+boxplot(price ~ view, main="Price vs View", data=house, col = rainbow(12) )
+boxplot(price ~ waterfront, main="Price vs Waterfront", data=house, col = rainbow(12) )
+boxplot(price ~ condition, main="Price vs Condition", data=house, col = rainbow(12) )
+boxplot(price ~ grade, main="Price vs grade", data=house, col = rainbow(12) )
+boxplot(price ~ yr_renovated, main="Price vs Renovated", data=house, col = rainbow(12))
+boxplot(price ~ bathrooms, main="Price vs Renovated", data=house, col = rainbow(12))
+boxplot(price ~ bedrooms, main="Price vs Renovated", data=house, col = rainbow(12))
+```
+
+```{r}
+# loadPkg("corrplot")
+# corrplot(housecor)
+# corrplot(housecor, method = "square") # try "circle", "square", "ellipse", "number", "shade", "color", "pie"
+# corrplot(housecor, method = "number")
+# corrplot(housecor, method = "number", type="upper")
+# corrplot.mixed(housecor)
+```
+
+
+
+
+
+### Try Tree Model
+```{r}
+loadPkg("rpart") # Classification trees, rpart(formula, data=, method=,control=) 
+```
+
+```{r, echo = T, fig.dim=c(6,4)}
+treefit <- rpart(Initial.Approvals ~ Fiscal.Year + State + NAICS,
+  	method="class", data=h1b)
+
+printcp(treefit) # display the results 
+plotcp(treefit) # visualize cross-validation results 
+summary(treefit) # detailed summary of splits
+
+# plot tree 
+plot(treefit, uniform=TRUE, main="Classification Tree for H1B")
+text(treefit, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+
+
+```{r}
+# create attractive postcript plot of tree 
+post(treefit, file = "kythosisTree2.ps", title = "Classification Tree for H1B")
+```
+```
