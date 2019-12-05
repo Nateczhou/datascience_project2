@@ -32,11 +32,12 @@ loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.
 
 ```{r, echo=F}
 house <- read.csv('kc_house_data.csv')
+head(house)
 
 str(house)
 # house <- na.omit(house) 
+summary(house)
 
-#h1b$State
 ```
 
 
@@ -44,19 +45,48 @@ str(house)
 loadPkg("dplyr")
 loadPkg("tidyr")
 ```
-    
-### Logistic Regression
+
+```{r}
+house$yr_renovated[house$yr_renovated>0] <- 1
+```
+
+
 ```{r, echo=F}
+# house = house[-2]
+
 house$view <- as.factor(house$view)
 house$grade <- as.factor(house$grade)
 house$waterfront  <- as.factor(house$waterfront )
 house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
 
 str(house)
+head(house)
 ```
 
+
+```{r corr, echo=FALSE}
+plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+houseaov= aov(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+summary(houseaov)
+```
+
+
+```{r}
+# loadPkg("corrplot")
+# corrplot(housecor)
+# corrplot(housecor, method = "square") # try "circle", "square", "ellipse", "number", "shade", "color", "pie"
+# corrplot(housecor, method = "number")
+# corrplot(housecor, method = "number", type="upper")
+# corrplot.mixed(housecor)
+```
+
+
+
 ```{r, echo=F}
-viewmodel <- glm(view ~ price+ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data = house, family = "binomial")
+viewmodel <- lm(price ~ price+ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data = house, family = "binomial")
 summary(viewmodel)
 # 
 # testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + floors +waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data = house, family = "binomial")
