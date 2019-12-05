@@ -30,8 +30,6 @@ loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.
 ```
 
 
-
-
 ```{r, echo=F}
 house <- read.csv('kc_house_data.csv')
 head(house)
