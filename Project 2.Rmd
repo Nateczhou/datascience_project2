@@ -1,5 +1,5 @@
 ---
-title: "Project 2: H-1B Visa"
+title: "Project 2: House Sales in King County, USA"
 author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
 date: "11/20/2019"
 output:
@@ -30,73 +30,92 @@ options(scientific=T, digits = 3)
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
 ```
 
-### Import Dataset
-```{r, include=T}
-house <- read.csv("kc_house_data.csv")
-summary(house)
-house$view <- as.factor(house$view)
-str(house)
-```
 
-### Chapter 1 SMART Question
-
-
-### Logistic Regression
-#### Full Model
-```{r}
-house$waterfront <- as.factor(house$waterfront)
-house$condition <- as.factor(house$condition)
-house$grade <- as.factor(house$grade)
-house$yr_renovated[house$yr_renovated > 0] <- 1
-house$yr_renovated <- as.factor(house$yr_renovated)
-head(house)
-testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors, data = house, family = "binomial")
-summary(testlog)
-```
-
-#### Adjusted Model
 ```{r, echo=F}
-testlog2 <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above + sqft_living15 + yr_built + lat + long, data = house, family = "binomial")
-summary(testlog2)
+house <- read.csv('kc_house_data.csv')
+head(house)
+
+str(house)
+# house <- na.omit(house) 
+summary(house)
+
 ```
 
-### Model Evaluation
 
-#### Full model 
-#####ROC & AUC
-```{r roc_auc1, echo=F}
-loadPkg("pROC") 
-prob=predict(testlog , type = c("response"))
+```{r, include=F}
+loadPkg("dplyr")
+loadPkg("tidyr")
+```
+
+```{r}
+house$yr_renovated[house$yr_renovated>0] <- 1
+```
+
+
+```{r, echo=F}
+# house = house[-2]
+
+house$view <- as.factor(house$view)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
+
+str(house)
+head(house)
+```
+
+
+```{r corr, echo=FALSE}
+plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+houseaov= aov(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+summary(houseaov)
+```
+
+
+```{r}
+# loadPkg("corrplot")
+# corrplot(housecor)
+# corrplot(housecor, method = "square") # try "circle", "square", "ellipse", "number", "shade", "color", "pie"
+# corrplot(housecor, method = "number")
+# corrplot(housecor, method = "number", type="upper")
+# corrplot.mixed(housecor)
+```
+
+
+
+```{r, echo=F}
+viewmodel <- lm(price ~ price+ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data = house, family = "binomial")
+summary(viewmodel)
+# 
+# testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + floors +waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data = house, family = "binomial")
+# summary(testlog)
+
+```
+
+```{r, echo=F}
+viewmodel_del <- glm(view ~ price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above  + yr_built + sqft_living15 + lat + long, data = house, family = "binomial")
+summary(viewmodel_nocondition )
+```
+
+
+
+
+
+
+
 house$prob=prob
 h <- roc(view~prob, data=house)
 auc(h)
 plot(h)
-```
 
-##### McFadden
-```{r, echo=FALSE}
-loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
-admitLogitpr2 = pR2(testlog)
-admitLogitpr2
-```
-
-#### Adjusted Model
-##### ROC & AUC
-```{r testlog2, echo=F}
-prob=predict(testlog2 , type = c("response"))
 house$prob=prob
 h <- roc(view~prob, data=house)
 auc(h)
 plot(h)
-```
 
-##### McFadden
-
-```{r McFadden, echo=FALSE}
-loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
-admitLogitpr2 = pR2(testlog2)
-admitLogitpr2
-```
 
 ### Linear Regression
 #### Full Model
