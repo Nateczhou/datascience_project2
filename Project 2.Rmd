@@ -130,7 +130,80 @@ summary(testlm)
 testlm2 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
 summary(testlm2)
 ```
+### PCA/PCR Without Factor
+```{r PCA_without_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+summary(pc_scale)
+summary(pc_noscale)
 
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
+```
+```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+```{r PCR}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
+
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "MSEP")
+validationplot(pcr_noscale_fit,val.type = "MSEP")
+```
+```{r}
+
+house$yr_renovated[house$yr_renovated>0] <- 1
+str(house)
+```
+
+### PCA/PCR With Factor
+```{r PCA_with_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, bedrooms, bathrooms, floors, waterfront, view, condition, grade, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_built, yr_renovated))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+# pc_scale
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
+```
+```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+```{r PCR}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
+
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "R2")
+validationplot(pcr_noscale_fit,val.type = "R2")
+```
 
 ### K-fold Cross Validation
 #### Spencer model 1
