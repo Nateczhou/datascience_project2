@@ -55,6 +55,26 @@ house$yr_renovated[house$yr_renovated>0] <- 1
 
 
 
+```{r , include=FALSE}
+#change variables to fator level
+house$view <- as.factor(house$view)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
+house$zipcode <- as.factor(house$zipcode)
+house$bedrooms <- as.factor(house$bedrooms)
+house$bathrooms <- as.factor(house$bathrooms)
+house$lat <- as.factor(house$lat)
+house$long <- as.factor(house$long)
+
+str(house)
+head(house)
+
+
+```
+
+
 
 ```{r corr, echo=FALSE}
 plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
@@ -76,16 +96,6 @@ summary(houseaov)
 
 #EDA
 
-```{r , results='markup', collapse=F}
-#change variables to fator level
-house$view <- as.factor(house$view)
-house$grade <- as.factor(house$grade)
-house$condition <- as.factor(house$condition)
-house$yr_renovated <- as.factor(house$yr_renovated)
-house$waterfront <- as.factor(house$waterfront)
-
-
-```
 
 
 
