@@ -31,69 +31,93 @@ loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.
 
 
 
+# Chapter 1: Introduction
+ 
+King County locates in Washington state, U.S. It is the most populous county in the state and the 12th-most populous in the country.  (Wikipidia.com) Therefore, this project we are using the data from Kaggle about King County’s house sale. This dataset was provided by King County. It includes the house sold in 2014 and 2015. In this project, we will analyze what features relate to the price of house; and we will try to predict house price. 
 
+# Chapter 2: Description of Data
 
-```{r, echo=F}
+```{r, include=F}
 house <- read.csv('kc_house_data.csv')
 head(house)
 
 str(house)
-house <- na.omit(house) 
-summary(house)
+# # house <- na.omit(house) 
+# summary(house)
 
 ```
+
 
 
 ```{r, include=F}
 loadPkg("dplyr")
 loadPkg("tidyr")
-```
-
-```{r}
 house$yr_renovated[house$yr_renovated>0] <- 1
 ```
 
+```{r , echo=FALSE}
+#change variables to fator level
+house$view <- as.factor(house$view)
+house$floors <-as.factor(house$floors)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
+house$zipcode <- as.factor(house$zipcode)
+house$bedrooms <- as.factor(house$bedrooms)
+house$bathrooms <- as.factor(house$bathrooms)
+house$lat <- as.factor(house$lat)
+house$long <- as.factor(house$long)
+
+```
+
+```{r excludepirce, echo=FALSE}
+house = house[house$price <= 2000000,]
+hist(house$price)
+```
+There are 21 variables in this dataset which include all house features in it, such as price, number of bedrooms and bathrooms, dimension, floors, view, grade, condition and years. The view shows from 0 to 4 how good the view of the property, and grade is an index from 1 to 13 to score the building construction and design. After data observation, we decided to exclude the house price that larger than $2million, because this range of house price only takes less than 1% of total house price. Moreover, the original data only shows the year of renovation; thus, we changed the year to 1 if the houses have been renovated and 0 for the houses that have never been renovated. In addition, we change several variables to factors, they are bedrooms, bathrooms, waterfront, view, condition, grade, zip code, latitude and longitude.
+
+```{r str, echo=FALSE}
+str(house)
+```
+Above is the structure of our dataset after changes. From this structure display we can see there are 70 different zip code, 5034 latitude and 752 longitude in this dataset. Thereby, we won’t include these three factors in our further model and analysis. 
+
+## EDA
+
+```{r eda, echo=FALSE}
+# change to histogram 
+boxplot(price ~ bedrooms, main="Price vs Bedrooms", data=house, col = rainbow(12))
+boxplot(price ~ bathrooms, main="Price vs Bathroom", data=house, col = rainbow(12))
+boxplot(price ~ floors, main="Price vs Floors", data=house, col = rainbow(12))
+boxplot(price ~ waterfront, main="Price vs Waterfront", data=house, col = rainbow(12))
+boxplot(price ~ view, main="Price vs View", data=house, col = rainbow(12))
+boxplot(price ~ condition, main="Price vs Condition", data=house, col = rainbow(12))
+boxplot(price ~ grade, main="Price vs Grade", data=house, col = rainbow(12))
+boxplot(price ~ yr_renovated, main="Price vs Renovated", data=house, col = rainbow(12))
+
+```
 
 
+# Chapter 3
 
+## Smart Question
+What features are associated with housing prices for King County, WA?
+
+## ANOVA Test
+
+In order to check which variable that associated with housing price, we are using anova test. Before we run the test, our hull hypothesis is price of house with different features are equal.
 ```{r corr, echo=FALSE}
-plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
-                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
-houseaov= aov(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
-                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+# plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+#                 sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+houseaov= aov(price ~ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + view + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data=house)
 summary(houseaov)
 ```
 
+The above result is our anova test result. From the chart, we can see the p-value of all variables are smaller than 0.05 which means it statistically significant. Therefore, we reject the null hypothesis. The prices of houses with different features are not equal.
+As the result, we will use all these 15 variables in the further model building. 
 
-```{r}
-# loadPkg("corrplot")
-# corrplot(housecor)
-# corrplot(housecor, method = "square") # try "circle", "square", "ellipse", "number", "shade", "color", "pie"
-# corrplot(housecor, method = "number")
-# corrplot(housecor, method = "number", type="upper")
-# corrplot.mixed(housecor)
-```
-
-#EDA
-
-```{r , results='markup', collapse=F}
-#change variables to fator level
-house$view <- as.factor(house$view)
-house$grade <- as.factor(house$grade)
-house$condition <- as.factor(house$condition)
-house$yr_renovated <- as.factor(house$yr_renovated)
-house$waterfront <- as.factor(house$waterfront)
-
-
-```
-
-
-
-
-# Smart Question
-What features are associated with housing prices for King County, WA?
-
-# Linear Model
+## Linear Model
 
 ```{r model 1, results='markup', collapse=F}
 loadPkg("faraway")
@@ -134,6 +158,9 @@ confint(model_3)
 vif(model_3)
 
 plot(model_3)
+```
+
+
 
 ```{r model 4, results='markup', collapse=F}
 #model with all variables
@@ -447,3 +474,7 @@ loadPkg("factoextra")
 fviz_cluster(k2, data = input)
 ```
 
+
+# Citation
+
+King County, Washington. (2019, September 21). Retrieved December 9, 2019, from https://en.wikipedia.org/wiki/King_County,_Washington.
