@@ -1,0 +1,159 @@
+---
+title: "Project 2"
+author: "Spencer Stucky"
+date: "12/3/2019"
+output: html_document
+---
+
+# R Markdown
+
+```{r setup, include=FALSE}
+# include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+knitr::opts_chunk$set(warning = F, results = F, message = F, collapse=T)
+# knitr::opts_chunk$set(echo = TRUE)
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+```
+
+```{r basicfcn, include=F}
+# can add quietly=T option to the require() function
+loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
+loadPkg("dplyr")
+loadPkg("tidyr")
+```
+
+```{r, results='markup', collapse=F}
+house <- read.csv("~/Documents/Documents/GWU School Work/DATS 6101/Project_2/kc_house_data.csv")
+#na.omit(house)
+summary(house)
+str(house)
+head(house, n = 10)
+```
+
+#Data Manipulation and Recoding
+
+```{r , results='markup', collapse=F}
+#change variables to factor level
+house$view <- as.factor(house$view)
+house$grade <- as.factor(house$grade)
+house$condition <- as.factor(house$condition)
+house$floors <-as.factor(house$floors)
+#house$yr_renovated <- as.factor(house$yr_renovated)
+house$waterfront <- as.factor(house$waterfront)
+house$bedrooms <- as.factor(house$bedrooms)
+house$bathrooms <- as.factor(house$bathrooms)
+#house$lat <- as.factor(house$lat)
+#house$long <- as.factor(house$long)
+
+#take out outliers in price
+house = house[house$price <= 2000000,]
+hist(house$price)
+
+#recode yr renovated to make factor level 0 and 1
+house$yr_renovated[house$yr_renovated>0] <- 1
+
+summary(house)
+str(house)
+head(house, n = 10)
+```
+
+# Smart Question
+
+What features are associated with housing prices for King County, WA?
+
+# Introduction to Linear Models
+
+In this section we wanted to look at which housing features most affected housing prices in King County, WA. From our analysis, we wanted to be able to build a model that most accurately could describe and hence predict housing sales in the county. Each model is a linear regression on the price at which the house sold. 
+
+Each model takes a different approach to explaining house prices. The first looks at basic categorical variables that desrcibe the house or its appearance using grade, view, condition, waterfront, bedroom, and bathroom variables. The idea here was to exlcude numeric variables such as square footage and the variables desrcibing surrounding houses to just focus on the more simplistic aspects of the house itself.
+
+The second model focuses on the numeric values of square feet for both the house itself and the surrounding 15 houses. The "15" variables are the average square feet of the surrounding 15 houses, for both living space and lot space, to give an idea of what the neighborhood housing size is like. The third model looks at year built and renovated to see if it effects housing price. As it turns out, as the analysis explains below, this was a poor model for explaining the results of our target variable. 
+
+From here, we chose a backward-step selection process for input variables. Model 4 uses all variables to test how all of them effect housing price. Then, we wanted to adjust the model to get the highest R2 with most significant variables. More importantly, we needed to remove some variables that either didn't make sense with our model analysis or they displayed high multicollinearity. We then move to model 5, which utilized backward step selection to remove some variables. Specifically, it tested all relevant variables except for square feet above and square feet basement because they were multicollinear. As well, this model excluded zip code, latitude, and longitude because they did not work for our model and couldn't explain price well because they were difficult to measure. This was the best model we reached for explaining our target variable, price, with all relevant variables. 
+
+# Correlation Plots 
+
+```{r corrplot, results='markup', collapse=F}
+housecat <- subset(house, select=c(sqft_lot, sqft_living, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_renovated, yr_built, price))
+str(housecat)
+
+loadPkg("corrplot")
+corhousecat = cor(housecat)
+corhousecat
+
+corrplot.mixed(corhousecat)
+```
+
+# Linear Models
+
+```{r model 1, results='markup', collapse=F}
+loadPkg("faraway")
+#model for categorical variables that describe house, exterior factors, and ranking
+model_1 <- lm(price ~ grade + view + condition + waterfront + bedrooms + bathrooms, data=house)
+summary(model_1)
+coef(model_1)
+confint(model_1)
+vif(model_1)
+
+plot(model_1)
+```
+In this model, we first wanted to look at the categorical variables for house, exterior factors, and ranking. R2 is 58% thus model explains 58% of target variable. Upper levels of grade, bedroom, bathroom, and condition are signficant, as well as all factor levels of view and waterfront. Categorical variables of grade, view, condition, bedrooms, and waterfront are positively correlated with price, except for condition 2 and 3 and quite a few number of bathroom levels, which are negatively correlated with price.
+
+```{r model 2, results='markup', collapse=F}
+#model on distance and size of house in sq ft and neighboring house sizes using numeric variables exluding sqft basement
+model_2 <- lm(price ~ sqft_lot + sqft_living + sqft_above + sqft_living15 + sqft_lot15, data=house)
+summary(model_2)
+coef(model_2)
+confint(model_2)
+vif(model_2)
+
+plot(model_2)
+```
+Idea behind this model was to look at sq footage and size of house and surrounding neighborhood to determine if they effect price in some way. Also to look at how these sq ft variables may be collinear and relate to one another. Sqft basement produced NA values and was removed from model. Some moderately high VIFs for sqft living and sqft above - most likely some collinearity there. R2 is 48% thus model explains 48% of results seen in data. All p values are significant. Sq ft lot, sqft living, and sq ft living 15 are positively correlated with price while sqft above and sqft lot 15 are negatively correlated with price. 
+
+```{r model 3, results='markup', collapse=F}
+head(house)
+#model on the time the house was built and renovated
+#omit zipcode b/c too many zip locations
+model_3 <- lm(price ~ yr_built + yr_renovated, data=house)
+summary(model_3)
+coef(model_3)
+confint(model_3)
+vif(model_3)
+
+plot(model_3)
+```
+Idea behind this model was to look at yr built and yr renovated of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 940. R2 is very low at 2.2% thus model does not do a good job of explaining results in data. 
+
+```{r model 4, results='markup', collapse=F}
+#model with all variables but omit zip, long, and lat b/c not relevant to our model's analysis
+model_4 <- lm(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data=house)
+summary(model_4)
+coef(model_4)
+confint(model_4)
+vif(model_4)
+
+plot(model_4)
+```
+This model used all variables. R2 is 66%. P values are significant except for bedrooms. Some bedroom factor levels, sqft above, and yr built are negatively correlated with price. Bathrooms, floors, grade, view, condition, waterfront, sq ft living, sq ft living of neighborhood houses, and yr renovated are all positively correlated with price and are signficiant. High VIFs for sqft living and sqft above indicate multicollinearity. Sq ft basement produced NA values, unable to identify why but possibly because of relation to another variable or because of many 0 values it had because this didnt happen in a previous model. This model has a good, decently high R2 but is not the best fitting because of multicollinearity and some odd insignificant variables like bedrooms. As well, zipcode, longitude, and latitude do not tell us anything about price given that they are not factored and it is not helpful or plausible to do so. As well, there is multicollinearity for sq ft variables and that should be manipulated in next model. 
+
+```{r model 5, results='markup', collapse=F}
+head(house)
+#model with relevant variables but removed sqft above and sq ft basement because of multicollinearity
+#Omit zipcode, latitude, and longitude b/c not relevant to model analysis
+model_5 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + floors, data=house)
+summary(model_5)
+coef(model_5)
+confint(model_5)
+vif(model_5)
+
+plot(model_5)
+```
+R2 is about 66% thus model explains 66% of results in data. Removed sqft above because of moderately high VIF at 7.1. A moderately high VIF at 5 for sqft living - not high enough for concern. Square feet living dropped from 8 to 5 when removing Sq ft above. I took out sqft basement b/c of high VIF value over 20. Upper ends and scores of condition, grade, and bathrooms were significant but not lower levels. Square feet living, square feet lot, waterfront, year built, year renovated, Sq feet living and lot of surrounding 15 houses average, and all factor levels of floor and view were statistically significant. Bedrooms, however, were consistently not significant. Bedrooms are possibly insignificant because overall square foot has more effect than number of bedrooms or there is multicollinearity present. A few notable results from the model: as bedrooms increase price tends to decrease, yr built is also negatively correlated with price, as is sq ft of surrounding lots.We also removed zip code, latitude, and longitude becasue they weren't properly measurable and didn't explain price well. Although this model has a lower R2 than the model above with all the variables, it makes more sense for analytic purposes and explaining the target variable.
+
+# ANOVA for Regression Models
+
+```{r modelanova, results='markup', collapse=F}
+anova(model_1, model_2, model_3, model_4, model_5)
+```
+ANOVA shows us that models 2, 3, 4, and 5 are statistically significant and are good models for explaining the data/target variable.
