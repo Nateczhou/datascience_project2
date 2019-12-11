@@ -14,8 +14,6 @@ output:
     toc_depth: '4'
 ---
 
-# R Markdown
-
 ```{r setup, include=FALSE}
 # include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
 knitr::opts_chunk$set(warning = F, results = F, message = F, echo = F)
