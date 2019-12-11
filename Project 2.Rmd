@@ -1,5 +1,5 @@
 ---
-title: "Project 2: H-1B Visa"
+title: "Project 2: House Sales in King County, USA"
 author: "Spencer Stucky, Cheng Zeng, Wenyu Zeng, Chao Zhou"
 date: "11/20/2019"
 output:
@@ -14,15 +14,14 @@ output:
     toc_depth: '4'
 ---
 
+# R Markdown
+
 ```{r setup, include=FALSE}
-# some of common options (and the defaults) are: 
 # include=T, eval=T, echo=T, results='hide'/'asis',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
-knitr::opts_chunk$set(include = T)
+knitr::opts_chunk$set(warning = F, results = F, message = F, echo = F)
 # knitr::opts_chunk$set(echo = TRUE)
 options(scientific=T, digits = 3) 
 # options(scipen=9, digits = 3) 
-# ‘scipen’: integer. A penalty to be applied when deciding to print numeric values in fixed or exponential notation.  Positive values bias towards fixed and negative towards scientific notation: fixed notation will be preferred unless it is more than ‘scipen’ digits wider.
-# use scipen=999 to prevent scientific notation at all times
 ```
 
 ```{r basicfcn, include=F}
@@ -30,254 +29,394 @@ options(scientific=T, digits = 3)
 loadPkg = function(x) { if (!require(x,character.only=T, quietly =T)) { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); if(!require(x,character.only=T)) stop("Package not found") } }
 ```
 
-### Import Dataset
-```{r, include=T}
-house <- read.csv("kc_house_data.csv")
-summary(house)
+
+
+# Chapter 1: Introduction
+ 
+King County locates in Washington state, U.S. It is the most populous county in the state and the 12th-most populous in the country.  (Wikipidia.com) Therefore, this project we are using the data from Kaggle about King County’s house sale. This dataset was provided by King County. It includes the house sold in 2014 and 2015. In this project, we will analyze what features relate to the price of house; and we will try to predict house price. 
+
+# Chapter 2: Description of Data
+
+```{r, include=F}
+house <- read.csv('kc_house_data.csv')
+head(house)
+str(house)
+# # house <- na.omit(house) 
+# summary(house)
+```
+
+
+
+```{r, include=F}
+loadPkg("dplyr")
+loadPkg("tidyr")
+house$yr_renovated[house$yr_renovated>0] <- 1
+```
+
+```{r , echo=FALSE}
+#change variables to fator level
 house$view <- as.factor(house$view)
+house$floors <-as.factor(house$floors)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
+house$zipcode <- as.factor(house$zipcode)
+house$bedrooms <- as.factor(house$bedrooms)
+house$bathrooms <- as.factor(house$bathrooms)
+house$lat <- as.factor(house$lat)
+house$long <- as.factor(house$long)
+```
+
+```{r excludepirce, echo=FALSE}
+house = house[house$price <= 2000000,]
+hist(house$price)
+```
+
+There are 21 variables in this dataset which include all house features in it, such as price, number of bedrooms and bathrooms, dimension, floors, view, grade, condition and years. The view shows from 0 to 4 how good the view of the property, and grade is an index from 1 to 13 to score the building construction and design. After data observation, we decided to exclude the house price that larger than $2million, because this range of house price only takes less than 1% of total house price. Moreover, the original data only shows the year of renovation; thus, we changed the year to 1 if the houses have been renovated and 0 for the houses that have never been renovated. In addition, we change several variables to factors, they are bedrooms, bathrooms, waterfront, view, condition, grade, zip code, latitude and longitude.
+
+```{r str, echo=FALSE}
 str(house)
 ```
 
-### Chapter 1 SMART Question
+Above is the structure of our dataset after changes. From this structure display we can see there are 70 different zip code, 5034 latitude and 752 longitude in this dataset. Thereby, we won’t include these three factors in our further model and analysis. 
+
+## EDA
+
+```{r eda, echo=FALSE}
+# change to histogram 
+boxplot(price ~ bedrooms, main="Price vs Bedrooms", data=house, col = rainbow(12))
+boxplot(price ~ bathrooms, main="Price vs Bathroom", data=house, col = rainbow(12))
+boxplot(price ~ floors, main="Price vs Floors", data=house, col = rainbow(12))
+boxplot(price ~ waterfront, main="Price vs Waterfront", data=house, col = rainbow(12))
+boxplot(price ~ view, main="Price vs View", data=house, col = rainbow(12))
+boxplot(price ~ condition, main="Price vs Condition", data=house, col = rainbow(12))
+boxplot(price ~ grade, main="Price vs Grade", data=house, col = rainbow(12))
+boxplot(price ~ yr_renovated, main="Price vs Renovated", data=house, col = rainbow(12))
+```
+
+From the boxplot we run for the 8 factors can see, the 33 bedrooms is not the most expensive house and more people prefer 3 to 4 bedrooms style. The house has waterfront are more expensive than the one doesn’t have, and more houses that have waterfront were sold. Additionally, combine with condition plot; there are 13 grades for the house condition and design, but only few are grade to 1 and 13. Half of the house have fair condition and design; at the meantime, better condition and design worth more.
+
+# Chapter 3
+
+## Smart Question
+
+What features are associated with housing prices for King County, WA?
+
+## ANOVA Test
+
+In order to check which variable that associated with housing price, we are using anova test. Before we run the test, our hull hypothesis is price of house with different features are equal.
+```{r corr, echo=FALSE}
+# plot(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + condition + grade + sqft_above + 
+#                 sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15+ lat + long, data=house)
+houseaov= aov(price ~ bedrooms + bathrooms + sqft_living + sqft_lot + floors + waterfront + view + condition + grade + sqft_above + 
+                sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15, data=house)
+summary(houseaov)
+```
+
+The above result is our anova test result. From the chart, we can see the p-value of all variables are smaller than 0.05 which means it statistically significant. Therefore, we reject the null hypothesis. The prices of houses with different features are not equal.
+As the result, we will use all these 15 variables in the further model building. 
 
 
-### Logistic Regression
-#### Full Model
-```{r}
-house$waterfront <- as.factor(house$waterfront)
-house$condition <- as.factor(house$condition)
-house$grade <- as.factor(house$grade)
-house$yr_renovated[house$yr_renovated > 0] <- 1
-house$yr_renovated <- as.factor(house$yr_renovated)
+# Chapter 4
+## Introduction to Linear Models
+
+In this section we wanted to look at which housing features most affected housing prices in King County, WA. From our analysis, we wanted to be able to build a model that most accurately could describe and hence predict housing sales in the county. Each model is a linear regression on the price at which the house sold. 
+
+Each model takes a different approach to explaining house prices. The first looks at basic categorical variables that desrcibe the house or its appearance using grade, view, condition, waterfront, bedroom, and bathroom variables. The idea here was to exlcude numeric variables such as square footage and the variables desrcibing surrounding houses to just focus on the more simplistic aspects of the house itself.
+
+The second model focuses on the numeric values of square feet for both the house itself and the surrounding 15 houses. The "15" variables are the average square feet of the surrounding 15 houses, for both living space and lot space, to give an idea of what the neighborhood housing size is like. The third model looks at year built and renovated to see if it effects housing price. As it turns out, as the analysis explains below, this was a poor model for explaining the results of our target variable. 
+
+From here, we chose a backward-step selection process for input variables. Model 4 uses all variables to test how all of them effect housing price. Then, we wanted to adjust the model to get the highest R2 with most significant variables. More importantly, we needed to remove some variables that either didn't make sense with our model analysis or they displayed high multicollinearity. We then move to model 5, which utilized backward step selection to remove some variables. Specifically, it tested all relevant variables except for square feet above and square feet basement because they were multicollinear. As well, this model excluded zip code, latitude, and longitude because they did not work for our model and couldn't explain price well because they were difficult to measure. This was the best model we reached for explaining our target variable, price, with all relevant variables. 
+
+## Linear Models
+
+### Add correlation plots 
+
+```{r model 1, results='markup', collapse=F}
+loadPkg("faraway")
+#model for categorical variables that describe house, exterior factors, and ranking
+model_1 <- lm(price ~ grade + view + condition + waterfront + bedrooms + bathrooms, data=house)
+summary(model_1)
+coef(model_1)
+confint(model_1)
+vif(model_1)
+plot(model_1)
+```
+In this model, we first wanted to look at the categorical variables for house, exterior factors, and ranking. R2 is 58% thus model explains 58% of target variable. Upper levels of grade, bedroom, bathroom, and condition are signficant, as well as all factor levels of view and waterfront. Categorical variables of grade, view, condition, bedrooms, and waterfront are positively correlated with price, except for condition 2 and 3 and quite a few number of bathroom levels, which are negatively correlated with price.
+
+```{r model 2, results='markup', collapse=F}
+#model on distance and size of house in sq ft and neighboring house sizes using numeric variables exluding sqft basement
+model_2 <- lm(price ~ sqft_lot + sqft_living + sqft_above + sqft_living15 + sqft_lot15, data=house)
+summary(model_2)
+coef(model_2)
+confint(model_2)
+vif(model_2)
+plot(model_2)
+```
+Idea behind this model was to look at sq footage and size of house and surrounding neighborhood to determine if they effect price in some way. Also to look at how these sq ft variables may be collinear and relate to one another. Sqft basement produced NA values and was removed from model. Some moderately high VIFs for sqft living and sqft above - most likely some collinearity there. R2 is 48% thus model explains 48% of results seen in data. All p values are significant. Sq ft lot, sqft living, and sq ft living 15 are positively correlated with price while sqft above and sqft lot 15 are negatively correlated with price. 
+
+```{r model 3, results='markup', collapse=F}
 head(house)
-testlog <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors, data = house, family = "binomial")
-summary(testlog)
+#model on the time the house was built and renovated
+#omit zipcode b/c too many zip locations
+model_3 <- lm(price ~ yr_built + yr_renovated, data=house)
+summary(model_3)
+coef(model_3)
+confint(model_3)
+vif(model_3)
+plot(model_3)
+```
+Idea behind this model was to look at yr built and yr renovated of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 940. R2 is very low at 2.2% thus model does not do a good job of explaining results in data. 
+
+```{r model 4, results='markup', collapse=F}
+#model with all variables
+model_4 <- lm(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data=house)
+summary(model_4)
+coef(model_4)
+confint(model_4)
+vif(model_4)
+plot(model_4)
+```
+This model used all variables. R2 is 66%. P values are significant except for sq ft above, bedrooms. Bedrooms, sqft above, yr built, zipcode and longitude are negatively correlated with price. High VIFs for sqft living and sqft above indicate multicollinearity but nothing too extreme. This model has the highest R2 but is not the best fitting because independent variables do not relevantly explain price. For instance, zipcode, longitude, and latitude do not tell us anything about price given that they are not factored and it is implausible to do so. As well, there is multicollinearity for sq ft variables and that should be manipulated in next model. 
+
+```{r model 5, results='markup', collapse=F}
+head(house)
+#model with relevant variables but removed sqft above and sq ft basement because of multicollinearity
+#Omit zipcode, latitude, and longitude b/c not relevant to model analysis
+model_5 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + floors, data=house)
+summary(model_5)
+coef(model_5)
+confint(model_5)
+vif(model_5)
+plot(model_5)
+```
+R2 is about 66% thus model explains 66% of results in data. Removed sqft above because of moderately high VIF at 7.1. A moderately high VIF at 5 for sqft living - not high enough for concern. Square feet living dropped from 8 to 5 when removing Sq ft above. I took out sqft basement b/c of high VIF value over 20. Upper ends and scores of condition, grade, and bathrooms were significant but not lower levels. Square feet living, square feet lot, waterfront, year built, year renovated, Sq feet living and lot of surrounding 15 houses average, and all factor levels of floor and view were statistically significant. Bedrooms, however, were consistently not significant. Bedrooms are possibly insignificant because overall square foot has more effect than number of bedrooms or there is multicollinearity present. A few notable results from the model: as bedrooms increase price tends to decrease, yr built is also negatively correlated with price, as is sq ft of surrounding lots.We also removed zip code, latitude, and longitude becasue they weren't properly measurable and didn't explain price well. Although this model has a lower R2 than the model above with all the variables, it makes more sense for analytic purposes and explaining the target variable.
+
+## Summary of Models
+
+Summary:
+
+Model  |  1 (Temp)  |  2 (Temp+Temp_Feel)  | 3 (Temp+Temp_Feel+Humidity)   | 4 (Temp+Temp_Feel+Humidity+Wind_Speed)  |  
+-------|-----|-----|--------|------|  
+r^2^  | `r format( summary(model_1)$r.squared )` | `r format( summary(model_2)$r.squared )` | `r format( summary(model_3)$r.squared )` | `r format( summary(model_4)$r.squared )`|
+Temp | `r format( model_1$coefficients['Temp'] ) ` (vif: `r format(vif(model_1)['Temp'])`) | `r format( model_2$coefficients['Temp'] ) ` (vif: `r format(vif(model_2)['Temp'])`) | `r format( model_3$coefficients['Temp'] ) ` (vif: `r format(vif(model_3)['Temp'])`) | `r format( model_4$coefficients['Temp'] ) ` (vif: `r format(vif(model_4)['Temp'])`) |  
+| | p:`r format( summary(model_1)$coefficients[,4]['Temp'],digits=3) ` | p:`r format( summary(model_2)$coefficients[,4]['Temp'],digits=3) ` | p:`r format( summary(model_3)$coefficients[,4]['Temp'],digits=3) ` | p:`r format( summary(model_4)$coefficients[,4]['Temp'],digits=3) `|
+Temp_Feel | | `r format( model_2$coefficients['Temp_Feel'] ) ` (vif: `r format(vif(model_2)['Temp_Feel'])`) | `r format( model_3$coefficients['Temp_Feel'] ) ` (vif: `r format(vif(model_3)['Temp_Feel'])`) | `r format( model_4$coefficients['Temp_Feel'] ) ` (vif: `r format(vif(model_4)['Temp_Feel'])`) ` |  
+| | | p:`r format( summary(model_2)$coefficients[,4]['Temp_Feel']) ` | p:`r format( summary(model_3)$coefficients[,4]['Temp_Feel'])` | p:`r format( summary(model_4)$coefficients[,4]['Temp_Feel'],digits=3)` |  
+Humidity | | | `r format( model_3$coefficients['Humidity'] ) ` (vif: `r format(vif(model_3)['Humidity'])`) | `r format( model_4$coefficients['Humidity'] ) ` (vif: `r format(vif(model_4)['Humidity'])`) |  
+| | | | p:`r format( summary(model_3)$coefficients[,4]['Humidity'],digits=3) ` | p:`r format( summary(model_4)$coefficients[,4]['Humidity'],digits=3) ` |  
+Wind_Speed | | || `r format( model_4$coefficients['Wind_Speed'] ) `  (vif: `r format(vif(model_4)['Wind_Speed'])`)|  
+| | | || p:`r format( summary(model_4)$coefficients[,4]['Wind_Speed'],digits=3) `|
+
+## ANOVA for Regression Models
+```{r modelanova, results='markup', collapse=F}
+anova(model_1,model_2,model_3,model_4,model_5)
 ```
 
-#### Adjusted Model
-```{r, echo=F}
-testlog2 <- glm(view~price + bedrooms + bathrooms + sqft_living + sqft_lot + sqft_above + sqft_living15 + yr_built + lat + long, data = house, family = "binomial")
-summary(testlog2)
+ANOVA shows us that the latter three models are statistically significant and are better at explaining the data. However, last model has a high RSS which indicates it is not a close fit model.
+
+
+
+# Chapter 5
+## PCA/PCR
+
+### PCA/PCR Without Factor
+```{r PCA_without_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15))
+#do pca
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+summary(pc_scale)
+summary(pc_noscale)
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
 ```
 
-### Model Evaluation
-
-#### Full model 
-#####ROC & AUC
-```{r roc_auc1, echo=F}
-loadPkg("pROC") 
-prob=predict(testlog , type = c("response"))
-house$prob=prob
-h <- roc(view~prob, data=house)
-auc(h)
-plot(h)
-```
-
-##### McFadden
-```{r, echo=FALSE}
-loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
-admitLogitpr2 = pR2(testlog)
-admitLogitpr2
-```
-
-#### Adjusted Model
-##### ROC & AUC
-```{r testlog2, echo=F}
-prob=predict(testlog2 , type = c("response"))
-house$prob=prob
-h <- roc(view~prob, data=house)
-auc(h)
-plot(h)
-```
-
-##### McFadden
-
-```{r McFadden, echo=FALSE}
-loadPkg("pscl") # use pR2( ) function to calculate McFadden statistics for model eval
-admitLogitpr2 = pR2(testlog2)
-admitLogitpr2
-```
-
-### Linear Regression
-#### Full Model
 ```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
 
-testlm <- lm(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
-summary(testlm)
+```{r PCR}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "MSEP")
+validationplot(pcr_noscale_fit,val.type = "MSEP")
 ```
 
-#### Adjusted Linear Model
 ```{r}
-testlm2 <- lm(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house)
-summary(testlm2)
+house$yr_renovated[house$yr_renovated>0] <- 1
+str(house)
 ```
 
+### PCA/PCR With Factor
+```{r PCA_with_factor}
+#subset the needed numeric value
+house_pca <- subset(house, select = c(price, bedrooms, bathrooms, floors, waterfront, view, condition, grade, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_built, yr_renovated))
+#do pca
 
-### K-fold Cross Validation
-#### Spencer model 1
-```{r, warning=F}
+pc_scale <- prcomp(house_pca , scale =TRUE)
+pc_noscale <- prcomp(house_pca , scale =FALSE)
+# pc_scale
+# pc_noscale
+#biplot(pc_scale, scale = 0)
+#biplot(pc_noscale, scale = 0)
+```
+
+```{r}
+#Let us plot the cumulation of variance using the sd
+pc_scale_var <- (pc_scale$sdev^2)
+pve_scale <- pc_scale_var/sum(pc_scale_var)
+plot(cumsum(pve_scale), xlab="Principal Component (standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+###################################
+pc_noscale_var <- (pc_noscale$sdev^2)
+pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
+plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
+``` 
+
+```{r PCR2}
+#install.packages("pls")
+loadPkg("pls")
+pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
+summary(pcr_scale_fit)
+pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
+summary(pcr_noscale_fit)
+validationplot(pcr_scale_fit,val.type = "R2")
+validationplot(pcr_noscale_fit,val.type = "R2")
+```
+
+Idea behind this model was to look at yr built, yr renovated, and location of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 924. R2 is very low at 2.5% thus model does not do a good job of explaining results in data. 
+
+# Chapter 6
+
+## K-fold Cross Validation
+K-fold cross validation is used so that we can better compare the linear models we have. The order of this cross validation match with what we did before with the linear models, and we also add in backward selection and stepwise selection to do feature selections. By doing a 10 fold cross validation, we want to find out if the last linear model we did is the best one among them.
+
+#### CV on Model 1
+```{r, warning=F, echo=F}
 loadPkg("caret")
 # Define training control
 set.seed(123) 
 train.control <- trainControl(method = "cv", number = 10)
-
-model <- train(price ~ grade + view + condition + waterfront, data = house, method = "lm", trControl = train.control)
+model <- train(price ~ grade + view + condition + waterfront + bedrooms + bathrooms, data=house, method = "lm", trControl = train.control)
 # Summarize the results
 print(model)
 ```
 
-#### Spencer model 2
+From the result, we can see that the R^2 is 0.576, which means 57.6% of price is being explained by the x variables, which contain the categorical variables that we think is relevant to price. We have a high RMSE and a high MAE score, which mean that this model might not be a good one, so we move on to the next model, and see if quantitative variables will help with creating a better model.
+
+#### CV on model 2
 ```{r,warning=F}
 set.seed(123)
-model2 <- train(price ~ sqft_living + sqft_lot + sqft_above + sqft_basement, data = house, method = "lm",
+model2 <- train(price ~ sqft_lot + sqft_living + sqft_above + sqft_living15 + sqft_lot15, data = house, method = "lm",
                trControl = train.control)
 # Summarize the results
 print(model2)
 ```
 
-#### Spencer model 3
+Unfortunately, based on the results we have, the R^2 value decrease from 0.576 to 0.484, when we change the variables to all quantitative variables. The RMSE value and the MAE also increase a lot, which means that this is not a good model for prediction.
+
+#### CV on model 3
 ```{r,warning=F}
 set.seed(123)
-model3 <- train(price ~ yr_built + yr_renovated + zipcode, data = house, method = "lm",
+model3 <- train(price ~ yr_built + yr_renovated, data=house, method = "lm",
                trControl = train.control)
 # Summarize the results
 print(model3)
 ```
 
-#### Spencer model 4
+For model 3, this is definetly not a good model because the R^2 value is only 0.0228, which means only about 2% of price is being explained by the "year built" and "year renovated". The RMSE and MAE values also increase from model 2 to model 3, thus, we believe this is not a good model to consider.
+
+#### CV on Full Model
 ```{r,warning=F}
 set.seed(123)
-model4 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + yr_built + yr_renovated + zipcode, data = house, method = "leapForward",
+modelfull <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data=house, method = "lm",
+               trControl = train.control)
+
+# Summarize the results
+print(modelfull)
+```
+
+Then, we move to the full model excluding the zipcode, longitude and latitude variables, because these three variables have too many levels, and this will take too long for the model to run and they are not useful for predicting the price. We now have a R^2 value of 0.657, which means 65.7% of price is being explained by the x variables, and this increase in R^2 value make sense because the value should increase as we increase the variables in the model, and the RMSE and MAE values are the smallest values that we contain so far. However, considering the model might overfit the data, and the multicollinearity inside the model, we wanna do a backward selection and a stepwise selection to do feature selecting.
+
+
+#### CV on Full Model with Backward Selection
+```{r,warning=F}
+set.seed(123)
+model4 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data=house, method = "leapBackward", tuneGrid = data.frame(nvmax = 1:15),
                trControl = train.control)
 # Summarize the results
 print(model4)
 ```
 
-#### Full Model
+For backward selection, it suggests us to use to model with the most variables we have, which means run a full model, since the RMSE will be the smallest. However, a full model is likely to overfit the data.
+
+#### CV on Full Model with Stepwise Selection
 ```{r, warning=F}
 set.seed(123)
 # Train the model
-model5 <- train(price ~view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + sqft_above + sqft_basement + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "leapSeq", tuneGrid = data.frame(nvmax = 1:18),
+model5 <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data=house, method = "leapSeq", trace = FALSE, tuneGrid = data.frame(nvmax = 1:15),
                trControl = train.control)
 # Summarize the results
 print(model5)
 ```
 
-#### Feature Selection based on the full model
+From the stepwise selections, R told us to use the model with 14 variables, because this way the RMSE will be the smallest. 
+
+```{r, echo=F, warning=F}
+options(max.print = 1000000)
+
+summary(model5$finalModel)
+```
+
+From the above, we can consider excluding variables without the asterick because this mean the variables are not significant in the model. Compare the result with the linear model we did before, we can consider excluding "sqft_lot".
+
+#### CV on a feature selected model using stepwise selection 
 ```{r, warning=F}
 set.seed(123)
-model6 <- train(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + lat + long + floors + zipcode, data = house, method = "lm",trControl = train.control)
+modelf <- train(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data = house, method = "lm",trControl = train.control)
+# Summarize the results
+print(modelf)
+```
+
+As the result shown above, the R^2 is 0.657 which is the same with the full model, and the RMSE only increase a little, and MAE decreases, therefore, we can consider this model is better than the full model.
+
+#### CV on model 5
+```{r, warning=F}
+set.seed(123)
+model6 <- train(price ~ view + bedrooms + bathrooms + sqft_living + sqft_lot + waterfront + condition + grade + yr_built + yr_renovated + sqft_living15 + sqft_lot15 + floors, data = house, method = "lm",trControl = train.control)
 # Summarize the results
 print(model6)
 ```
 
+We then did the feature selections based on the significancy in the linear models and research. The results show that this model has R^2 of 0.656, RMSE of 168793 and MAE of 121316. The R^2 value is high and the RMSE and MAE values don't increase a lot, compare to the models before. 
+
 #### Table for Cross Validation
-```{r}
-modelcom <- matrix(c(236009,0.586,153783, 260958,0.494,173416, 362133,0.024,231985, 208763,0.675,135348, 191991,0.726,119763, 191973,0.726,119731),ncol=3,byrow=TRUE)
+```{r, echo=F}
+modelcom <- matrix(c(187560,0.576,136801, 206680,0.484,151435, 284537,0.0228,208884, 168630,0.657,120982, 168637,0.657,120981, 168793,0.656,121316),ncol=3,byrow=TRUE)
 options("scipen" = 100, "digits" = 2)
 colnames(modelcom) <- c("RMSE","RSquared","MAE")
-rownames(modelcom) <- c("Model 1","Model 2","Model 3", "Model 4", "Full Model", "Significant feature Model")
+rownames(modelcom) <- c("Model 1","Model 2","Model 3", "Full Model", "Model based on Stepwise Selection", "Significant feature Model")
 modelcom <- as.table(modelcom)
 modelcom
 ```
 
+Based on the table, we can see the last model is the best model we obtain so far. The last model has a high R^2 value of 0.656, which suggests that 65.6% of price is being explained by the x variables, and its RMSE and MAE values are not too high compare to the full model. We don't consider the full model because there is a chance that we might overfit the data, and we don't use the model based on the stepwise selection because the model has 14 variables, which also has a chance of overfitting the data. Therefore, the last model is the best model that we obtain so far.
 
+# Citation
 
-### KNN
-```{r}
-set.seed(1)
-house_data_train_rows = sample(1:nrow(house),     #<- from 1 to the number of 
-                                                     #   rows in the data set
-                              round(0.8 * nrow(house), 0),  #<- multiply the 
-                                                                #   number of rows
-                                                                #   by 0.8 and round
-                                                                #   the decimals
-                              replace = FALSE)       #<- don't replace the numbers
-
-# Let's check to make sure we have 80% of the rows. 
-length(house_data_train_rows) / nrow(house)
-
-house_data_train = house[house_data_train_rows, ]  #<- select the rows identified in
-                                                     #   the bank_data_train_rows data
-house_data_test = house[-house_data_train_rows, ]  #<- select the rows that weren't
-                                                     #   identified in the
-                                                     #   bank_data_train_rows data
-
-# Check the number of rows in each set.
-head(house_data_train)
-nrow(house_data_test)
-
-```
-Train the classifier
-
-```{r}
-# Let's train the classifier for k = 3. 
-# Install the "class" package that we'll use to run kNN.
-# Take some time to learn about all its functionality.
-# install.packages("class") 
-loadPkg("class")
-
-# k-Nearest Neighbor is a randomized algorithm, so make sure to
-# use set.seed() to make your results repeatable.
-set.seed(1)
-house_3NN = knn(train = house_data_train[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],  #<- training set cases
-               test = house_data_test[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")],    #<- test set cases
-               cl = house_data_train[, "view"],                         #<- category for true classification
-               k = 3) #,                                                    #<- number of neighbors considered
-               # use.all = TRUE)                                            #<- control ties between class assignments
-                                                                            #   If true, all distances equal to the kth 
-                                                                            #   largest are included
-
-# View the output.
-str(house_3NN)
-length(house_3NN)
-table(house_3NN)
-```
-
-
-```{r}
-# How does the kNN classification compare to the true class?
-# Let's take a look at the confusion matrix by combining the 
-# predictions from bank_3NN to the original data set.
-kNN_res = table(house_3NN,
-                house_data_test$`view`)
-kNN_res
-sum(kNN_res)  #<- the total is all the test examples
-
-# Select the true positives and true negatives by selecting
-# only the cells where the row and column names are the same.
-kNN_res[row(kNN_res) == col(kNN_res)]
-
-# Calculate the accuracy rate by dividing the correct classifications
-# by the total number of classifications.
-kNN_acc = sum(kNN_res[row(kNN_res) == col(kNN_res)]) / sum(kNN_res)
-kNN_acc
-```
-
-### K-MEAN
-```{r, warning=F}
-loadPkg("dplyr")
-input <- house %>% select("bedrooms", "bathrooms", "sqft_living", "sqft_lot", "sqft_above", "sqft_living15", "yr_built", "lat", "long")
-kmeans(input, centers = 3, nstart = 20)
-```
-```{r}
-wssplot <- function(data, nc=15, seed=123){
-               wss <- (nrow(data)-1)*sum(apply(data,2,var))
-               for (i in 2:nc){
-                    set.seed(seed)
-                    wss[i] <- sum(kmeans(data, centers=i)$withinss)}
-                plot(1:nc, wss, type="b", xlab="Number of groups",
-                     ylab="Sum of squares within a group")}
-
-wssplot(input, nc = 20)
-```
-
-```{r}
-k2 <- kmeans(input, centers = 4, nstart = 20)
-```
-
-```{r}
-loadPkg("factoextra")
-fviz_cluster(k2, data = input)
-```
+King County, Washington. (2019, September 21). Retrieved December 9, 2019, from https://en.wikipedia.org/wiki/King_County,_Washington.
 
