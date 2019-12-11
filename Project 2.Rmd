@@ -216,8 +216,9 @@ ANOVA shows us that the latter three models are statistically significant and ar
 
 
 
-# Chapter 5
-## PCA/PCR
+# Chapter 5 PCA/PCR
+
+After using we trying to use linear model to predict the price in our dataset, we find out there are too many variables for our feature variables. We immediately think of PCA so that we can reduce the dimensionality of our feature variables. Since PCA only works on numerical variable, we decided to pick out all the numerical variables for running PCA. The speed is immediatly improved. We know PCA can also have the effects on saving data storage although in our case the size of this dataset is no way around huge. However, we find it is so fast to run PCA compared with using linear models. We decide to run PCA both with factor variables and without factor variables.
 
 ### PCA/PCR Without Factor
 ```{r PCA_without_factor}
@@ -229,9 +230,11 @@ pc_noscale <- prcomp(house_pca , scale =FALSE)
 summary(pc_scale)
 summary(pc_noscale)
 # pc_noscale
-#biplot(pc_scale, scale = 0)
-#biplot(pc_noscale, scale = 0)
+biplot(pc_scale, scale = 0)
+biplot(pc_noscale, scale = 0)
 ```
+  
+First we only choose numerical variables when run PCA, since the variance is not too huge between these variables we consider running PCA with both scaled data and unscaled data. Since our y variable is also numeric, we cannot see too much from the biplot. We cannot see obvious clustering of data since all the data are clustered together. However we did see normalizing the variable before running make the variance more equal.
 
 ```{r}
 #Let us plot the cumulation of variance using the sd
@@ -243,6 +246,8 @@ pc_noscale_var <- (pc_noscale$sdev^2)
 pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
 plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
 ``` 
+
+After PCA, we plotted out the cumulatice proportion of variance explained graph of the PCA test. The normalized graph shows that when we use 4 components here it will capture 90 percent of the variance of the data. On the other hand, for the non-normalized graph it shows only one component can capture almost 100 percent of the variance of the data which is unexpected. We think this is maybe because our variable are all closely related because their unit are the area of a house. 
 
 ```{r PCR}
 #install.packages("pls")
@@ -251,28 +256,42 @@ pcr_scale_fit=pcr(price~.,data=house_pca,scale=TRUE,validation ="CV")
 summary(pcr_scale_fit)
 pcr_noscale_fit=pcr(price~.,data=house_pca,scale=FALSE,validation ="CV")
 summary(pcr_noscale_fit)
-validationplot(pcr_scale_fit,val.type = "MSEP")
-validationplot(pcr_noscale_fit,val.type = "MSEP")
+validationplot(pcr_scale_fit,val.type = "R2")
+validationplot(pcr_noscale_fit,val.type = "R2")
 ```
+
+After using PCA test, we plan to use principal components regression model to fit our data to see if the model is improved compared with linear model we previously used. We look at the results and find if we only need to use 3 components to capture 90 percent of the feature variable variance and 48 percent of the prediction variable. We also run a validation plot for this PCR model and we see the r2 number is around 50 percent when we use 2 components. It mean using these 2 components and this model explains 50 percent of our data.
 
 ```{r}
 house$yr_renovated[house$yr_renovated>0] <- 1
 str(house)
+house$view <- as.numeric(house$view)
+house$floors <-as.numeric(house$floors)
+house$grade <- as.numeric(house$grade)
+house$waterfront  <- as.numeric(house$waterfront )
+house$condition  <- as.numeric(house$condition )
+house$yr_renovated <- as.numeric(house$yr_renovated)
+house$zipcode <- as.numeric(house$zipcode)
+house$bedrooms <- as.numeric(house$bedrooms)
+house$bathrooms <- as.numeric(house$bathrooms)
 ```
 
 ### PCA/PCR With Factor
+
+This time we apply the PCA and PCR with factor variable included. We would like to see if there is any improvment in this new model.
 ```{r PCA_with_factor}
 #subset the needed numeric value
 house_pca <- subset(house, select = c(price, bedrooms, bathrooms, floors, waterfront, view, condition, grade, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_built, yr_renovated))
 #do pca
-
 pc_scale <- prcomp(house_pca , scale =TRUE)
 pc_noscale <- prcomp(house_pca , scale =FALSE)
 # pc_scale
 # pc_noscale
-#biplot(pc_scale, scale = 0)
-#biplot(pc_noscale, scale = 0)
+biplot(pc_scale, scale = 0)
+biplot(pc_noscale, scale = 0)
 ```
+
+Although technicly we should not scale our data when we are using factor by using hamming distance, we still want to see if there is any difference before and after when we scale our data.
 
 ```{r}
 #Let us plot the cumulation of variance using the sd
@@ -284,6 +303,8 @@ pc_noscale_var <- (pc_noscale$sdev^2)
 pve_noscale <- pc_noscale_var/sum(pc_noscale_var)
 plot(cumsum(pve_noscale), xlab="Principal Component (non-standardized)", ylab ="Cumulative Proportion of Variance Explained",ylim=c(0,1),type="b")
 ``` 
+
+In this model, we see using 10 component we can capture 90 percent of variance of the data. However, if we not scale the data at all, only one variable will caputure almost 100 percent of the variance.
 
 ```{r PCR2}
 #install.packages("pls")
@@ -296,7 +317,24 @@ validationplot(pcr_scale_fit,val.type = "R2")
 validationplot(pcr_noscale_fit,val.type = "R2")
 ```
 
-Idea behind this model was to look at yr built, yr renovated, and location of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 924. R2 is very low at 2.5% thus model does not do a good job of explaining results in data. 
+We did see improvment in this time, when we use 10 components, 93 percent of the x variable has been explained and 62 percent of the price variable has been captured which was 52 percent in the without factor case above. For the unscaled PCR data, we can see the variance can always be captured around 90 percent. From the validation graph wecan see, there is a huge jump in r2 number when we start to choose more than 3 components in our model, the peak r2 value in this case is over 60 percent. By using the principal component regression, it reduced dimension of our data so easily and we do get some improvment for our model in this case.
+
+```{r}
+#change everything back to factors
+house$view <- as.factor(house$view)
+house$floors <-as.factor(house$floors)
+house$grade <- as.factor(house$grade)
+house$waterfront  <- as.factor(house$waterfront )
+house$condition  <- as.factor(house$condition )
+house$yr_renovated <- as.factor(house$yr_renovated)
+house$zipcode <- as.factor(house$zipcode)
+house$bedrooms <- as.factor(house$bedrooms)
+house$bathrooms <- as.factor(house$bathrooms)
+house$lat <- as.factor(house$lat)
+house$long <- as.factor(house$long)
+```
+
+
 
 # Chapter 6
 
