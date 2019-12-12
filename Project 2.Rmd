@@ -144,6 +144,8 @@ house$yr_renovated <- as.factor(house$yr_renovated)
 
 ## Linear Models
 
+### Model 1
+
 ```{r model 1, results='markup', collapse=F}
 loadPkg("faraway")
 #model for categorical variables that describe house, exterior factors, and ranking
@@ -157,6 +159,8 @@ plot(model_1)
 
 In this model, we first wanted to look at the categorical variables for house, exterior factors, and ranking. R2 is 58% thus model explains 58% of target variable. Upper levels of grade, bedroom, bathroom, and condition are signficant, as well as all factor levels of view and waterfront. Categorical variables of grade, view, condition, bedrooms, and waterfront are positively correlated with price, except for condition 2 and 3 and quite a few number of bathroom levels, which are negatively correlated with price.
 
+### Model 2
+
 ```{r model 2, results='markup', collapse=F}
 #model on distance and size of house in sq ft and neighboring house sizes using numeric variables exluding sqft basement
 model_2 <- lm(price ~ sqft_lot + sqft_living + sqft_above + sqft_living15 + sqft_lot15, data=house)
@@ -168,6 +172,8 @@ plot(model_2)
 ```
 
 Idea behind this model was to look at sq footage and size of house and surrounding neighborhood to determine if they effect price in some way. Also to look at how these sq ft variables may be collinear and relate to one another. Sqft basement produced NA values and was removed from model. Some moderately high VIFs for sqft living and sqft above - most likely some collinearity there. R2 is 48% thus model explains 48% of results seen in data. All p values are significant. Sq ft lot, sqft living, and sq ft living 15 are positively correlated with price while sqft above and sqft lot 15 are negatively correlated with price. 
+
+### Model 3
 
 ```{r model 3, results='markup', collapse=F}
 #head(house)
@@ -183,6 +189,8 @@ plot(model_3)
 
 Idea behind this model was to look at yr built and yr renovated of housing to see if they determined something about price. All are highly signficant at .001 level. Year built and Yr renovated were positively correlated with price, with yr built increasing price by 940. R2 is very low at 2.2% thus model does not do a good job of explaining results in data. 
 
+### Model 4
+
 ```{r model 4, results='markup', collapse=F}
 #model with all variables but omit zip, long, and lat b/c not relevant to our model's analysis
 model_4 <- lm(price ~ bedrooms + bathrooms + floors + grade + view + condition + waterfront + sqft_living + sqft_lot + sqft_above + sqft_living15 + sqft_lot15 + yr_built + yr_renovated + sqft_basement, data=house)
@@ -192,7 +200,10 @@ confint(model_4)
 vif(model_4)
 plot(model_4)
 ```
-This model used all variables. R2 is 65%. P values are significant except for bedrooms. Some bedroom factor levels, sqft above, and yr built are negatively correlated with price. Bathrooms, floors, grade, view, condition, waterfront, sq ft living, sq ft living of neighborhood houses, and yr renovated are all positively correlated with price and are signficiant. High VIFs for sqft living and sqft above indicate multicollinearity. Sq ft basement produced NA values, unable to identify why but possibly because of relation to another variable or because of many 0 values it had because this didnt happen in a previous model. This model has a good, decently high R2 but is not the best fitting because of multicollinearity and some odd insignificant variables like bedrooms. As well, zipcode, longitude, and latitude do not tell us anything about price given that they are not factored and it is not helpful or plausible to do so. As well, there is multicollinearity for sq ft variables and that should be manipulated in next model. 
+
+This model used all variables. R2 is 66%. P values are significant except for bedrooms. Some bedroom factor levels, sqft above, and yr built are negatively correlated with price. Bathrooms, floors, grade, view, condition, waterfront, sq ft living, sq ft living of neighborhood houses, and yr renovated are all positively correlated with price and are signficiant. High VIFs for sqft living and sqft above indicate multicollinearity. Sq ft basement produced NA values, unable to identify why but possibly because of relation to another variable or because of many 0 values it had because this didnt happen in a previous model. This model has a good, decently high R2 but is not the best fitting because of multicollinearity and some odd insignificant variables like bedrooms. As well, zipcode, longitude, and latitude do not tell us anything about price given that they are not factored and it is not helpful or plausible to do so. As well, there is multicollinearity for sq ft variables and that should be manipulated in next model. 
+
+### Model 5
 
 ```{r model 5, results='markup', collapse=F}
 #head(house)
@@ -205,13 +216,15 @@ confint(model_5)
 vif(model_5)
 plot(model_5)
 ```
-R2 is about 66% thus model explains 65% of results in data. Removed sqft above because of moderately high VIF at 7.1. A moderately high VIF at 5 for sqft living - not high enough for concern. Square feet living dropped from 8 to 5 when removing Sq ft above. I took out sqft basement b/c of high VIF value over 20. Upper ends and scores of condition, grade, and bathrooms were significant but not lower levels. Square feet living, square feet lot, waterfront, year built, year renovated, Sq feet living and lot of surrounding 15 houses average, and all factor levels of floor and view were statistically significant. Bedrooms, however, were consistently not significant. Bedrooms are possibly insignificant because overall square foot has more effect than number of bedrooms or there is multicollinearity present. A few notable results from the model: as bedrooms increase price tends to decrease, yr built is also negatively correlated with price, as is sq ft of surrounding lots.We also removed zip code, latitude, and longitude becasue they weren't properly measurable and didn't explain price well. Although this model has a lower R2 than the model above with all the variables, it makes more sense for analytic purposes and explaining the target variable.
+
+R2 is about 66% thus model explains 66% of results in data. Removed sqft above because of moderately high VIF at 7.1. A moderately high VIF at 5 for sqft living - not high enough for concern. Square feet living dropped from 8 to 5 when removing Sq ft above. I took out sqft basement b/c of high VIF value over 20. Upper ends and scores of condition, grade, and bathrooms were significant but not lower levels. Square feet living, square feet lot, waterfront, year built, year renovated, Sq feet living and lot of surrounding 15 houses average, and all factor levels of floor and view were statistically significant. Bedrooms, however, were consistently not significant. Bedrooms are possibly insignificant because overall square foot has more effect than number of bedrooms or there is multicollinearity present. A few notable results from the model: as bedrooms increase price tends to decrease, yr built is also negatively correlated with price, as is sq ft of surrounding lots.We also removed zip code, latitude, and longitude becasue they weren't properly measurable and didn't explain price well. Although this model has a lower R2 than the model above with all the variables, it makes more sense for analytic purposes and explaining the target variable.
 
 # ANOVA for Regression Models
 
 ```{r modelanova, results='markup', collapse=F}
 anova(model_1, model_2, model_3, model_4, model_5)
 ```
+
 ANOVA shows us that models 2, 3, 4, and 5 are statistically significant and are good models for explaining the data/target variable. However, we know that the models might overfit the data, thus, we will do PCA/PCR and model evaluations to check if we can have the best model among them.
 
 
@@ -281,6 +294,7 @@ house$bathrooms <- as.numeric(house$bathrooms)
 ### PCA/PCR With Factor
 
 This time we apply the PCA and PCR with factor variable included. We would like to see if there is any improvment in this new model.
+
 ```{r PCA_with_factor, warning=F}
 #subset the needed numeric value
 house_pca <- subset(house, select = c(price, bedrooms, bathrooms, floors, waterfront, view, condition, grade, sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, yr_built, yr_renovated))
